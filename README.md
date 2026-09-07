@@ -23,6 +23,19 @@ preview-style: favicon
 ---
 ```
 
+### fetch-title CLI (URL → preview text, outside Obsidian)
+
+The plugin's title-resolution pipeline is also packaged as a standalone Node CLI, so external tools (e.g. openclaw) can ask "what text would the plugin display for this URL?" without running Obsidian:
+
+```powershell
+npm run build                                            # produces dist/fetch-title.cjs
+npm run fetch-title -- https://obsidian.md               # JSON: {url, title, description, siteName, error}
+npm run fetch-title -- --plain https://obsidian.md       # title text only
+npm run fetch-title -- --timeout 5000 https://github.com # custom timeout (ms)
+```
+
+Same pipeline as the inline preview: fetch page → parse og:/twitter:/`<title>`/JSON-LD → domain-specific handlers (Twitter/Wikipedia/Reddit/…) → hostname fallback. One process per invocation, results printed as JSON lines.
+
 ---
 
 ## 中文
@@ -47,3 +60,16 @@ preview-style: favicon
 preview-style: favicon
 ---
 ```
+
+### fetch-title CLI（URL → 替换文字，Obsidian 之外可用）
+
+插件的标题解析管线同时打包成了独立的 Node CLI，让外部工具（如 openclaw）不跑 Obsidian 也能问"这个 URL 插件会显示什么文字"：
+
+```powershell
+npm run build                                            # 产出 dist/fetch-title.cjs
+npm run fetch-title -- https://obsidian.md               # JSON: {url, title, description, siteName, error}
+npm run fetch-title -- --plain https://obsidian.md       # 只输出标题文本
+npm run fetch-title -- --timeout 5000 https://github.com # 自定义超时（毫秒）
+```
+
+与 inline 预览同一套管线：抓页面 → 解析 og:/twitter:/`<title>`/JSON-LD → 站点特化 handler（Twitter/Wikipedia/Reddit 等）→ 域名兜底。每次调用一个进程，结果按行输出 JSON。

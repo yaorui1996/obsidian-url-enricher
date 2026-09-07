@@ -16,6 +16,7 @@ import {
 	MIN_DESCRIPTION_LENGTH,
 	TITLE_SEPARATOR_LENGTH
 } from "../constants";
+import { deriveTitleFromUrl } from "../utils/url";
 
 /**
  * Helper functions for text processing
@@ -33,15 +34,6 @@ function truncate(text: string, maxLength: number): string {
 		return text;
 	}
 	return text.slice(0, maxLength).trim() + ELLIPSIS;
-}
-
-function deriveTitleFromUrl(url: string): string {
-	try {
-		const parsed = new URL(url);
-		return parsed.hostname.replace(/^www\./, "");
-	} catch {
-		return url;
-	}
 }
 
 function equalsIgnoreCase(a: string, b: string): boolean {

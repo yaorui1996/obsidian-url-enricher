@@ -5,6 +5,7 @@ All notable changes to URL Enricher will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- **Fork: fetch-title CLI.** `npm run fetch-title -- <url>` runs the plugin's title-resolution pipeline in plain Node (no Obsidian required) and prints the text the inline preview would show, one JSON object per URL. Built as `dist/fetch-title.cjs` via a second esbuild bundle; the pipeline is unchanged and Obsidian's `requestUrl` remains the default inside the plugin
 - **Fork: Favicon preview style.** A new `Favicon` option in the preview style setting (and `preview-style: favicon` frontmatter) renders the URL with the inline look — favicon, pill background, plugin font — but shows the URL text itself instead of a fetched title. The page is never requested; the only outbound call is the Google favicon service for the icon
 - Release workflow now verifies the tag matches `manifest.json` and `versions.json`, has no `v` prefix, and is reachable from `master` before publishing
 

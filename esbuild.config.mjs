@@ -43,6 +43,29 @@ const context = await esbuild.context({
 
 if (prod) {
 	await context.rebuild();
+	await context.dispose();
+
+	// Second bundle: the fetch-title CLI for use outside Obsidian (plain Node).
+	// "obsidian" is aliased to a local stub - the CLI always injects a fetch-based
+	// request executor, so the aliased symbols never run; this just satisfies the
+	// bundler for plugin modules reachable from fetchTitle().
+	const cliContext = await esbuild.context({
+		entryPoints: ["src/cli/fetchTitleCli.ts"],
+		bundle: true,
+		platform: "node",
+		format: "cjs",
+		target: "es2022",
+		alias: {
+			obsidian: "./src/cli/obsidian-stub.ts",
+		},
+		logLevel: "info",
+		sourcemap: false,
+		treeShaking: true,
+		outfile: "dist/fetch-title.cjs",
+	});
+	await cliContext.rebuild();
+	await cliContext.dispose();
+
 	process.exit(0);
 } else {
 	await context.watch();

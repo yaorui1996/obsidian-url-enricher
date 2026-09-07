@@ -1,4 +1,12 @@
 import { requestUrl, RequestUrlParam, RequestUrlResponse } from "obsidian";
+import type { RequestUrlResponseLike } from "./types";
+
+/**
+ * Executor abstraction so the fetch pipeline can run outside Obsidian
+ * (e.g. the fetch-title CLI in plain Node) by injecting a fetch-based
+ * implementation; the default keeps using Obsidian's requestUrl.
+ */
+export type RequestExecutor = (request: RequestUrlParam) => Promise<RequestUrlResponseLike>;
 
 /**
  * Options for HTTP request timeout
@@ -11,7 +19,10 @@ export interface FetcherOptions {
  * MetadataFetcher - Handles HTTP requests with timeout support
  */
 export class MetadataFetcher {
-	constructor(private options: FetcherOptions) {}
+	constructor(
+		private options: FetcherOptions,
+		private requestExecutor: RequestExecutor = (request) => requestUrl(request)
+	) {}
 
 	updateOptions(options: Partial<FetcherOptions>): void {
 		this.options = { ...this.options, ...options };
@@ -34,16 +45,16 @@ export class MetadataFetcher {
 	 */
 	async fetchUrl(url: string): Promise<RequestUrlResponse> {
 		const headers = this.buildRequestHeaders();
-		const requestPromise = requestUrl({ url, headers });
+		const requestPromise = this.requestExecutor({ url, headers });
 
 		if (this.options.requestTimeoutMs <= 0) {
 			return await requestPromise;
 		}
 
-		let timeoutId: number | null = null;
+		let timeoutId: ReturnType<typeof setTimeout> | null = null;
 		try {
 			const timeoutPromise = new Promise<never>((_, reject) => {
-				timeoutId = window.setTimeout(() => {
+				timeoutId = globalThis.setTimeout(() => {
 					reject(new Error("Request timed out"));
 				}, this.options.requestTimeoutMs);
 			});
@@ -52,7 +63,7 @@ export class MetadataFetcher {
 			return response;
 		} finally {
 			if (timeoutId !== null) {
-				window.clearTimeout(timeoutId);
+				globalThis.clearTimeout(timeoutId);
 			}
 		}
 	}
@@ -67,16 +78,16 @@ export class MetadataFetcher {
 		};
 
 		const requestWithHeaders = { ...request, headers };
-		const requestPromise = requestUrl(requestWithHeaders);
+		const requestPromise = this.requestExecutor(requestWithHeaders);
 
 		if (this.options.requestTimeoutMs <= 0) {
 			return await requestPromise;
 		}
 
-		let timeoutId: number | null = null;
+		let timeoutId: ReturnType<typeof setTimeout> | null = null;
 		try {
 			const timeoutPromise = new Promise<never>((_, reject) => {
-				timeoutId = window.setTimeout(() => {
+				timeoutId = globalThis.setTimeout(() => {
 					reject(new Error("Request timed out"));
 				}, this.options.requestTimeoutMs);
 			});
@@ -85,7 +96,7 @@ export class MetadataFetcher {
 			return response;
 		} finally {
 			if (timeoutId !== null) {
-				window.clearTimeout(timeoutId);
+				globalThis.clearTimeout(timeoutId);
 			}
 		}
 	}

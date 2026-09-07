@@ -14,6 +14,7 @@
 
 import { RequestUrlParam } from "obsidian";
 import type { LinkMetadata } from "./types";
+import type { RequestExecutor } from "./MetadataFetcher";
 import {
 	createDefaultMetadataHandlers,
 	type MetadataHandler,
@@ -59,7 +60,8 @@ export class LinkPreviewService {
 	constructor(
 		options: LinkPreviewServiceOptions,
 		settings: InlineLinkPreviewSettings,
-		metadataHandlers: MetadataHandler[] = createDefaultMetadataHandlers()
+		metadataHandlers: MetadataHandler[] = createDefaultMetadataHandlers(),
+		requestExecutor?: RequestExecutor
 	) {
 		this.settings = settings;
 		this.metadataHandlers = metadataHandlers;
@@ -68,7 +70,7 @@ export class LinkPreviewService {
 		this.cache = new LRUCache<string, LinkMetadata>(METADATA_CACHE_MAX_SIZE);
 
 		// Initialize modules
-		this.fetcher = new MetadataFetcher(options);
+		this.fetcher = new MetadataFetcher(options, requestExecutor);
 		this.htmlParser = new HtmlParser();
 		this.faviconResolver = new FaviconResolver(
 			(request) => this.fetcher.performRequest(request),
@@ -188,7 +190,7 @@ export class LinkPreviewService {
 
 		// Wait if too many concurrent requests
 		while (this.activeRequestCount >= MAX_CONCURRENT_REQUESTS) {
-			await new Promise(resolve => window.setTimeout(resolve, 50));
+			await new Promise(resolve => globalThis.setTimeout(resolve, 50));
 		}
 
 		// Create new request promise

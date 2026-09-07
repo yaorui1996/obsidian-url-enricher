@@ -13,6 +13,9 @@ coverage/
 # They should be uploaded to GitHub releases instead.
 main.js
 
+# fetch-title CLI bundle (built from src/cli/ by npm run build)
+dist/
+
 # Exclude sourcemaps
 *.map
 

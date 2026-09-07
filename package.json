@@ -15,7 +15,8 @@
 		"test:watch": "vitest",
 		"test:ui": "vitest --ui",
 		"test:coverage": "vitest run --coverage",
-		"test:coverage:ui": "vitest --ui --coverage"
+		"test:coverage:ui": "vitest --ui --coverage",
+		"fetch-title": "node dist/fetch-title.cjs"
 	},
 	"keywords": [],
 	"author": "Matt Marotta",

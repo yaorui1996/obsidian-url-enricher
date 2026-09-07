@@ -79,6 +79,9 @@ src/
     LRUCache.ts              # Generic LRU cache (max 1000 items)
     logger.ts                # Structured logging (4 log levels)
     performance.ts           # Performance tracking and profiling
+  cli/                       # Node-only entry points (NOT loaded by the plugin)
+    fetchTitleCli.ts         # fetch-title CLI: URL → preview text, bundled to dist/fetch-title.cjs
+    obsidian-stub.ts         # Stand-in for the obsidian package used by the CLI bundle only
 tests/
   # 618 tests across 14 test files, 100% pass rate
 eslint.config.js             # ESLint v9 flat config (enforces Obsidian plugin rules)

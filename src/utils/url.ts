@@ -61,6 +61,20 @@ export function looksLikeUrl(text: string): boolean {
 	return SINGLE_URL_REGEX.test(text.trim());
 }
 
+/**
+ * Derive a display title from a URL: the hostname without a leading "www.",
+ * falling back to the raw URL when it can't be parsed. This is the plugin's
+ * last-resort title, both in the decoration pipeline and in fetchTitle().
+ */
+export function deriveTitleFromUrl(url: string): string {
+	try {
+		const parsed = new URL(url);
+		return parsed.hostname.replace(/^www\./, "") || url;
+	} catch {
+		return url;
+	}
+}
+
 const WHITESPACE_ONLY_REGEX = /^\s*$/;
 
 export interface UrlListEntry {
