@@ -15,6 +15,7 @@ A third preview style, `Favicon`, that looks like the inline style (favicon + pi
 - **No page fetches** — the linked page is never requested; no metadata (title/description) is fetched at all. Only the Google favicon service is contacted for the icon (cached for 30 days)
 - **Text is the URL itself** — the preview shows the exact URL from your markdown, never replaced by fetched content
 - Like the inline style, the URL is revealed as raw text while the caret is inside it
+- **Works in Reading view too** — a markdown post processor renders the same pill in Reading view (Live Preview stays non-destructive; Reading view replaces the rendered link element with the pill, the markdown file is still never modified). inline/card styles remain Live-Preview-only
 - Set it globally in the plugin settings (Preview style → `Favicon`), or per note via frontmatter:
 
 ```yaml
@@ -53,6 +54,7 @@ Same pipeline as the inline preview: fetch page → parse og:/twitter:/`<title>`
 - **不抓取网页** —— 完全不请求链接页面，不获取标题/描述元数据。只有 favicon 图标走 Google favicon 服务（缓存 30 天）
 - **文字就是 URL 本身** —— 预览里显示的正是 markdown 里写的那个 URL，永远不会被替换成抓取来的内容
 - 和 inline 一样：光标移进 URL 时会露出原始文本方便编辑
+- **阅读模式同样生效** —— 通过 markdown post processor 在阅读视图渲染同样的胶囊（Live Preview 本就不改源码；阅读视图只是把渲染出来的链接元素替换成胶囊，markdown 文件依旧永不被修改）。inline/card 仍仅限 Live Preview
 - 全局设置：插件设置里 Preview style 选 `Favicon`；或按笔记用 frontmatter 覆盖：
 
 ```yaml

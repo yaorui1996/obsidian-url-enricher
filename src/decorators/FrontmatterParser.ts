@@ -125,3 +125,47 @@ export function hasFrontmatter(text: string): boolean {
 	const config = parsePageConfig(text);
 	return Object.keys(config).length > 0;
 }
+
+/**
+ * Parse page-level preview config from Obsidian's parsed frontmatter object
+ * (as provided to MarkdownPostProcessorContext.frontmatter in Reading view,
+ * where there is no document text to run parsePageConfig on).
+ *
+ * Reuses parsePageConfig as the single source of validation truth by
+ * synthesizing a `---\nkey: value\n---` document from the known keys and
+ * letting the existing regex/range checks accept or reject each value.
+ */
+export function parsePageConfigFromFrontmatter(
+	frontmatter: Record<string, unknown> | undefined | null
+): PageConfig {
+	if (!frontmatter) {
+		return {};
+	}
+
+	const KNOWN_KEYS = [
+		"preview-style",
+		"max-card-length",
+		"max-inline-length",
+		"show-favicon",
+		"include-description",
+		"inline-color-mode",
+		"card-color-mode",
+	] as const;
+
+	const lines: string[] = [];
+	for (const key of KNOWN_KEYS) {
+		const value = frontmatter[key];
+		// Frontmatter values relevant here are scalars; skip anything else
+		// (arrays/objects) rather than stringifying them blind.
+		if (typeof value !== "string" && typeof value !== "number" && typeof value !== "boolean") {
+			continue;
+		}
+		lines.push(`${key}: ${value}`);
+	}
+
+	if (lines.length === 0) {
+		return {};
+	}
+
+	return parsePageConfig(`---\n${lines.join("\n")}\n---`);
+}

@@ -17,3 +17,15 @@ export interface EditorWithCM {
 export interface MarkdownViewWithEditor {
 	editor?: EditorWithCM;
 }
+
+/**
+ * Extended MarkdownView with the Reading-view (preview mode) renderer.
+ * previewMode is an undocumented Obsidian internal; the rerender call site
+ * feature-detects it, so the shape stays minimal here.
+ */
+export interface MarkdownViewWithPreview {
+	getMode?: () => string;
+	previewMode?: {
+		rerender?: () => unknown;
+	};
+}

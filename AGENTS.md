@@ -4,7 +4,7 @@
 
 ## Overview
 
-This plugin adds rich, non-destructive link previews to Obsidian. URLs remain as plain text in your notes. The plugin enhances them with live inline previews or cards showing metadata (title, description, favicon) in editor view only.
+This plugin adds rich, non-destructive link previews to Obsidian. URLs remain as plain text in your notes. The plugin enhances them with live inline previews or cards showing metadata (title, description, favicon) in editor view. The fork's favicon style additionally renders in Reading view via a markdown post processor.
 
 - **Current version**: 1.4.0
 - **Plugin ID**: `url-enricher` (renamed from `obsidian-inline-link-preview` in 0.9.0)
@@ -75,6 +75,8 @@ src/
     faviconCache.ts          # Persistent favicon cache (30-day expiration)
     metadataHandlers/        # Domain-specific metadata extraction
     types.ts                 # Shared service contracts
+  reading/                   # Reading view (preview mode) rendering
+    readingViewEnricher.ts   # MarkdownPostProcessor for the favicon style in Reading view
   utils/                     # Utility functions (8 modules)
     LRUCache.ts              # Generic LRU cache (max 1000 items)
     logger.ts                # Structured logging (4 log levels)
@@ -91,9 +93,10 @@ eslint.config.js             # ESLint v9 flat config (enforces Obsidian plugin r
 
 **Non-Destructive Decorations**: CodeMirror 6 ViewPlugin adds visual previews without modifying markdown source. URLs remain as plain text.
 
-**Preview Styles**: Two styles available:
+**Preview Styles**: Three styles available:
 - **Inline** (renamed from "bubble" in 0.9.0): Compact preview with favicon + title
 - **Card**: Full preview with image, title, description, favicon, URL
+- **Favicon** (fork addition): Inline look but the text is the URL itself; no page fetches. The only style that renders in Reading view
 
 **Type Safety**: 100% type-safe codebase. Zero `any` types. Use `unknown` with type guards for external data.
 

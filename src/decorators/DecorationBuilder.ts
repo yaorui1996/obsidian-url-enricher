@@ -43,7 +43,7 @@ function equalsIgnoreCase(a: string, b: string): boolean {
 /**
  * Calculate the maximum length for content based on preview style
  */
-function calculateMaxLength(
+export function calculateMaxLength(
 	previewStyle: PreviewStyle,
 	maxCardLength: number,
 	maxInlineLength: number
@@ -74,7 +74,7 @@ interface ProcessedMetadata {
 	error: string | null;
 }
 
-function processMetadata(
+export function processMetadata(
 	metadata: import("../services/types").LinkMetadata | undefined,
 	url: string,
 	linkText: string | undefined,

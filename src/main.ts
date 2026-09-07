@@ -9,10 +9,11 @@
 
 import { Plugin } from "obsidian";
 import { createUrlPreviewDecorator, refreshDecorationsEffect as urlPreviewRefreshEffect } from "./editor/urlPreviewDecorator";
+import { createReadingViewPostProcessor } from "./reading/readingViewEnricher";
 import { DEFAULT_SETTINGS, InlineLinkPreviewSettingTab, InlineLinkPreviewSettings, normalizeSettings } from "./settings";
 import { LinkPreviewService } from "./services/linkPreviewService";
 import { FaviconCache } from "./services/faviconCache";
-import type { MarkdownViewWithEditor } from "./types/obsidian-extended";
+import type { MarkdownViewWithEditor, MarkdownViewWithPreview } from "./types/obsidian-extended";
 import { Logger, LogLevel } from "./utils/logger";
 import {
 	enablePerformanceTracking,
@@ -38,6 +39,11 @@ export default class InlineLinkPreviewPlugin extends Plugin {
 		this.registerEditorExtension([
 			createUrlPreviewDecorator(this.linkPreviewService, () => this.settings)
 		]);
+
+		// Render the favicon preview style in Reading view (inline/card stay Live-Preview-only)
+		this.registerMarkdownPostProcessor(
+			createReadingViewPostProcessor(this.linkPreviewService, () => this.settings)
+		);
 
 		this.addSettingTab(new InlineLinkPreviewSettingTab(this.app, this));
 
@@ -87,18 +93,25 @@ export default class InlineLinkPreviewPlugin extends Plugin {
 				return;
 			}
 
-			const view = leaf.view as MarkdownViewWithEditor;
+			const view = leaf.view as MarkdownViewWithEditor & MarkdownViewWithPreview;
 			const cm = view.editor?.cm;
 
-			// Early return if no CodeMirror instance
-			if (!cm) {
-				return;
+			// Live Preview: dispatch refresh effect to trigger decoration rebuild
+			if (cm) {
+				cm.dispatch({
+					effects: [urlPreviewRefreshEffect.of(null)]
+				});
 			}
 
-			// Dispatch refresh effect to trigger decoration rebuild
-			cm.dispatch({
-				effects: [urlPreviewRefreshEffect.of(null)]
-			});
+			// Reading view: no CodeMirror instance drives the DOM; ask the
+			// preview renderer to re-render so the post processor re-runs.
+			// previewMode is an undocumented internal - feature-detect it.
+			if (typeof view.getMode === "function" && view.getMode() === "preview") {
+				const rerender = view.previewMode?.rerender;
+				if (typeof rerender === "function") {
+					rerender.call(view.previewMode);
+				}
+			}
 		});
 	}
 
