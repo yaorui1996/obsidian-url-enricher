@@ -3,6 +3,7 @@ import type { EditorView } from "@codemirror/view";
 import { syntaxTree } from "@codemirror/language";
 import type { InlineLinkPreviewSettings, PreviewStyle } from "../settings";
 import type { LinkPreviewService } from "../services/linkPreviewService";
+import type { LinkMetadata } from "../services/types";
 import { parsePageConfig, hasFrontmatter } from "./FrontmatterParser";
 import { findWikilinkUrls, findMarkdownLinks, findBareUrls, isInCodeBlock } from "./UrlMatcher";
 import { UrlPreviewWidget, ErrorIndicatorWidget } from "./PreviewWidget";
@@ -294,6 +295,51 @@ export function buildUrlDecorations(
 		// Check for code block context
 		const node = tree.resolveInner(start, 1);
 		if (isInCodeBlock(node, start)) {
+			return;
+		}
+
+		// Favicon mode: same visual treatment as inline (icon + pill styling),
+		// but the preview text is the URL as written - no metadata fetch, the
+		// page itself is never requested. showFavicon is deliberately ignored:
+		// the mode exists to show the icon.
+		if (previewStyle === "favicon") {
+			const metadata: LinkMetadata = {
+				title: url,
+				description: null,
+				favicon: service.getFaviconIconUrl(url)
+			};
+
+			// Same caret behavior as inline: reveal the raw URL while editing
+			if (cursorPos >= start && cursorPos <= end) {
+				return;
+			}
+
+			const processed = processMetadata(metadata, url, linkText, {
+				previewStyle,
+				maxCardLength,
+				maxInlineLength,
+				showFavicon: true,
+				includeDescription: false,
+				keepEmoji
+			});
+
+			// Rendered as a replacement, exactly like inline mode
+			const replacementWidget = Decoration.replace({
+				widget: new UrlPreviewWidget(
+					url,
+					processed.title,
+					null,
+					processed.faviconUrl,
+					false,
+					"inline",
+					calculateMaxLength(previewStyle, maxCardLength, maxInlineLength),
+					processed.siteName,
+					processed.error,
+					inlineColorMode,
+					cardColorMode
+				)
+			});
+			decorations.push({ from: start, to: end, decoration: replacementWidget });
 			return;
 		}
 

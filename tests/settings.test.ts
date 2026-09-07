@@ -195,18 +195,23 @@ describe('Settings', () => {
 	describe('Settings Validation', () => {
 		describe('PreviewStyle Validation', () => {
 			it('should accept "inline" as valid', () => {
-				const validStyles: Array<'inline' | 'card'> = ['inline', 'card'];
+				const validStyles: Array<'inline' | 'card' | 'favicon'> = ['inline', 'card', 'favicon'];
 				expect(validStyles).toContain('inline');
 			});
 
 			it('should accept "card" as valid', () => {
-				const validStyles: Array<'inline' | 'card'> = ['inline', 'card'];
+				const validStyles: Array<'inline' | 'card' | 'favicon'> = ['inline', 'card', 'favicon'];
 				expect(validStyles).toContain('card');
 			});
 
-			it('should only have two valid preview styles', () => {
-				const validStyles: Array<'inline' | 'card'> = ['inline', 'card'];
-				expect(validStyles).toHaveLength(2);
+			it('should accept "favicon" as valid', () => {
+				const validStyles: Array<'inline' | 'card' | 'favicon'> = ['inline', 'card', 'favicon'];
+				expect(validStyles).toContain('favicon');
+			});
+
+			it('should only have three valid preview styles', () => {
+				const validStyles: Array<'inline' | 'card' | 'favicon'> = ['inline', 'card', 'favicon'];
+				expect(validStyles).toHaveLength(3);
 			});
 		});
 

@@ -32,6 +32,8 @@ class FakeService {
 	cache = new Map<string, LinkMetadata>();
 	/** urls that getMetadata() was actually called for */
 	requested: string[] = [];
+	/** urls that getFaviconIconUrl() was actually called for */
+	faviconRequested: string[] = [];
 	private resolvers = new Map<string, () => void>();
 
 	constructor(private withFavicon = false) {}
@@ -56,6 +58,10 @@ class FakeService {
 				res(md);
 			});
 		});
+	}
+	getFaviconIconUrl(url: string): string | null {
+		this.faviconRequested.push(url);
+		return `https://www.google.com/s2/favicons?domain=${new URL(url).hostname}&sz=128`;
 	}
 	resolveOne(url: string) {
 		this.resolvers.get(url)?.();
@@ -90,7 +96,7 @@ async function waitFor(predicate: () => boolean, timeoutMs = 1000): Promise<void
 
 function mount(
 	service: FakeService,
-	previewStyle: "inline" | "card",
+	previewStyle: "inline" | "card" | "favicon",
 	cursorPos: number
 ): EditorView {
 	const settings = { ...DEFAULT_SETTINGS, previewStyle };
@@ -251,4 +257,59 @@ describe("decorator rendering (real CodeMirror)", () => {
 		expect(view.dom.querySelectorAll(".competing-widget").length).toBe(0);
 	});
 
+});
+
+describe("decorator rendering: favicon mode", () => {
+	let view: EditorView | null = null;
+
+	beforeEach(() => {
+		view?.destroy();
+		view = null;
+	});
+
+	it("renders inline-style pills showing the URL text, with icons and no page fetch", () => {
+		const service = new FakeService();
+		view = mount(service, "favicon", 0);
+
+		// synchronous: pills are present immediately, no settle/waitFor needed
+		expect(view.dom.querySelectorAll(".url-preview--inline").length).toBe(3);
+		expect(view.dom.querySelectorAll("img.url-preview__favicon").length).toBe(3);
+
+		// the preview text is the URL as written, never fetched metadata
+		const titles = Array.from(view.dom.querySelectorAll(".url-preview__title")).map(
+			(e) => e.textContent ?? ""
+		);
+		expect(titles).toEqual(URLS);
+		expect(service.requested).toEqual([]);
+		expect(service.faviconRequested.sort()).toEqual([...URLS].sort());
+
+		// no descriptions are shown in this mode
+		expect(view.dom.querySelectorAll(".url-preview__description").length).toBe(0);
+	});
+
+	it("reveals the raw URL while the caret is inside it, like inline mode", () => {
+		const service = new FakeService();
+		// caret at end of doc == inside the last link
+		view = mount(service, "favicon", DOC.length);
+
+		const pills = view.dom.querySelectorAll(".url-preview--inline").length;
+		expect(pills).toBe(2); // the caret-occupied URL shows as raw text
+
+		view.dispatch({ selection: { anchor: 0 } });
+		expect(view.dom.querySelectorAll(".url-preview--inline").length).toBe(3);
+		expect(service.requested).toEqual([]); // still no page fetches
+	});
+
+	it("keeps pills across caret moves and doc edits, refetching nothing", () => {
+		const service = new FakeService();
+		view = mount(service, "favicon", 0);
+		expect(view.dom.querySelectorAll(".url-preview--inline").length).toBe(3);
+
+		view.dispatch({ selection: { anchor: DOC.length } });
+		expect(view.dom.querySelectorAll(".url-preview--inline").length).toBe(2);
+
+		view.dispatch({ selection: { anchor: 0 } });
+		expect(view.dom.querySelectorAll(".url-preview--inline").length).toBe(3);
+		expect(service.requested).toEqual([]); // still no page fetches
+	});
 });

@@ -8,7 +8,20 @@ Fork of [mattmarotta/obsidian-url-enricher](https://github.com/mattmarotta/obsid
 
 ## Fork features
 
-（暂无。上游功能已够用；后续改动会记录在这里。）
+### Favicon preview style
+
+A third preview style, `Favicon`, that looks like the inline style (favicon + pill background + plugin font) but shows the **URL text as written** instead of a fetched page title:
+
+- **No page fetches** — the linked page is never requested; no metadata (title/description) is fetched at all. Only the Google favicon service is contacted for the icon (cached for 30 days)
+- **Text is the URL itself** — the preview shows the exact URL from your markdown, never replaced by fetched content
+- Like the inline style, the URL is revealed as raw text while the caret is inside it
+- Set it globally in the plugin settings (Preview style → `Favicon`), or per note via frontmatter:
+
+```yaml
+---
+preview-style: favicon
+---
+```
 
 ---
 
@@ -20,4 +33,17 @@ Fork of [mattmarotta/obsidian-url-enricher](https://github.com/mattmarotta/obsid
 
 ## Fork 新增功能
 
-（暂无。上游功能已够用；后续改动会记录在这里。）
+### Favicon 预览模式
+
+新增第三种预览风格 `Favicon`，视觉上和 inline 一样（图标 + 胶囊底色 + 插件字体），但显示的是 **URL 原文**而不是抓取的页面标题：
+
+- **不抓取网页** —— 完全不请求链接页面，不获取标题/描述元数据。只有 favicon 图标走 Google favicon 服务（缓存 30 天）
+- **文字就是 URL 本身** —— 预览里显示的正是 markdown 里写的那个 URL，永远不会被替换成抓取来的内容
+- 和 inline 一样：光标移进 URL 时会露出原始文本方便编辑
+- 全局设置：插件设置里 Preview style 选 `Favicon`；或按笔记用 frontmatter 覆盖：
+
+```yaml
+---
+preview-style: favicon
+---
+```

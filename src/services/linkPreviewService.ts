@@ -142,6 +142,17 @@ export class LinkPreviewService {
 	}
 
 	/**
+	 * Resolve a favicon URL for favicon-only preview mode.
+	 * No network requests - reads the persistent cache or composes the
+	 * Google favicon service URL synchronously.
+	 * @param url - Page URL to resolve the favicon for
+	 * @returns Favicon URL, or null when the URL can't be parsed
+	 */
+	getFaviconIconUrl(url: string): string | null {
+		return this.faviconResolver.buildFaviconUrlSync(url);
+	}
+
+	/**
 	 * Get cache statistics for monitoring and debugging
 	 * @returns Cache statistics including hit rate and size
 	 */

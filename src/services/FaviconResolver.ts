@@ -23,6 +23,36 @@ export class FaviconResolver {
 	}
 
 	/**
+	 * Synchronously resolve a favicon URL without any network request.
+	 *
+	 * Used by favicon-only preview mode: the Google favicon service URL is a
+	 * pure string composition, so no page fetch is needed. Cache hits (including
+	 * cached nulls) return directly; a miss composes the URL and records it so
+	 * repeated decoration rebuilds don't re-mark the persistent cache dirty.
+	 */
+	buildFaviconUrlSync(pageUrl: string): string | null {
+		try {
+			const parsed = new URL(pageUrl);
+			const origin = parsed.origin;
+
+			if (this.persistentCache) {
+				const cached = this.persistentCache.get(origin);
+				if (cached !== undefined) {
+					return cached;
+				}
+			}
+
+			const googleFavicon = this.buildGoogleFaviconUrl(parsed);
+			if (googleFavicon && this.persistentCache) {
+				this.persistentCache.set(origin, googleFavicon);
+			}
+			return googleFavicon;
+		} catch {
+			return null;
+		}
+	}
+
+	/**
 	 * Resolve the best favicon URL for a page
 	 */
 	async resolveFavicon(pageUrl: string): Promise<string | null> {

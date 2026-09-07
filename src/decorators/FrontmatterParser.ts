@@ -53,7 +53,7 @@ export function parsePageConfig(text: string): PageConfig {
 		const styleMatch = line.match(/^preview-style:\s*(.+)$/i);
 		if (styleMatch) {
 			const value = styleMatch[1].trim().toLowerCase();
-			if (value === 'inline' || value === 'card') {
+			if (value === 'inline' || value === 'card' || value === 'favicon') {
 				config.previewStyle = value;
 			}
 		}

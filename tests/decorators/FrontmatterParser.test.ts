@@ -21,6 +21,12 @@ describe("FrontmatterParser", () => {
 			expect(config.previewStyle).toBe("card");
 		});
 
+		it("should parse preview-style favicon value", () => {
+			const text = "---\npreview-style: favicon\n---\n# Heading";
+			const config = parsePageConfig(text);
+			expect(config.previewStyle).toBe("favicon");
+		});
+
 		it("should parse max-card-length field", () => {
 			const text = "---\nmax-card-length: 500\n---\n# Heading";
 			const config = parsePageConfig(text);

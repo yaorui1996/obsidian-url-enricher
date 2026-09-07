@@ -12,7 +12,7 @@ import {
 } from "./constants";
 
 export type PreviewColorMode = "none" | "subtle";
-export type PreviewStyle = "inline" | "card";
+export type PreviewStyle = "inline" | "card" | "favicon";
 
 export interface InlineLinkPreviewSettings {
 	includeDescription: boolean;
@@ -78,7 +78,7 @@ export function normalizeSettings(raw: unknown): InlineLinkPreviewSettings {
 		requestTimeoutMs: clampNumber(data.requestTimeoutMs, REQUEST_TIMEOUT_MIN, Number.MAX_SAFE_INTEGER, DEFAULT_SETTINGS.requestTimeoutMs),
 		showFavicon: asBoolean(data.showFavicon, DEFAULT_SETTINGS.showFavicon),
 		keepEmoji: asBoolean(data.keepEmoji, DEFAULT_SETTINGS.keepEmoji),
-		previewStyle: oneOf<PreviewStyle>(data.previewStyle, ["inline", "card"], DEFAULT_SETTINGS.previewStyle),
+		previewStyle: oneOf<PreviewStyle>(data.previewStyle, ["inline", "card", "favicon"], DEFAULT_SETTINGS.previewStyle),
 		inlineColorMode: oneOf<PreviewColorMode>(data.inlineColorMode, ["none", "subtle"], DEFAULT_SETTINGS.inlineColorMode),
 		cardColorMode: oneOf<PreviewColorMode>(data.cardColorMode, ["none", "subtle"], DEFAULT_SETTINGS.cardColorMode),
 		showHttpErrorWarnings: asBoolean(data.showHttpErrorWarnings, DEFAULT_SETTINGS.showHttpErrorWarnings),
@@ -120,6 +120,7 @@ export class InlineLinkPreviewSettingTab extends PluginSettingTab {
 							options: {
 								inline: "Inline — compact inline style",
 								card: "Card — prominent card style with more details",
+								favicon: "Favicon — inline look with the URL text, no page fetch",
 							},
 						},
 					},
