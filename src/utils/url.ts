@@ -94,6 +94,31 @@ const WEB_PAGE_EXTENSIONS = new Set([
 ]);
 
 /**
+ * True for URLs that a code host renders as a web page rather than serving the
+ * raw file. github.com/owner/repo/blob/main/README.md ends in .md, which the
+ * extension heuristic would call an attachment, but GitHub renders that blob as
+ * a page. Only the raw forms (raw.githubusercontent.com/..., github.com/.../raw/...)
+ * actually deliver the file, and those never contain /blob/ so they stay
+ * attachments. GitLab likewise renders /-/blob/.
+ */
+export function isRenderedBlobUrl(url: string): boolean {
+	let parsed: URL;
+	try {
+		parsed = new URL(url);
+	} catch {
+		return false;
+	}
+
+	const host = parsed.hostname.replace(/^www\./, "");
+	const path = parsed.pathname;
+
+	return (
+		(host === "github.com" && path.includes("/blob/")) ||
+		(host === "gitlab.com" && path.includes("/-/blob/"))
+	);
+}
+
+/**
  * Decide whether a URL points at an attachment file rather than a web page.
  *
  * Judgment is purely static - no request is made - so the favicon style (which
@@ -101,6 +126,9 @@ const WEB_PAGE_EXTENSIONS = new Set([
  * segment looks like a filename": it has an extension, and that extension is
  * not a known web-page suffix. This catches https://alist.yaorui.top/d/picgo/test.pdf
  * while leaving /blog and /about.html (both pages) alone.
+ *
+ * A rendered blob view on a code host (github.com/.../blob/main/README.md)
+ * counts as a page, not an attachment, even though it ends in .md.
  *
  * query/hash are ignored (URL.pathname excludes them), so
  * .../test.pdf?token=abc still resolves.
@@ -114,6 +142,12 @@ export function isAttachmentUrl(url: string): boolean {
 	}
 
 	if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+		return false;
+	}
+
+	// Code hosts render /blob/ ... into a page even when it ends in a file
+	// extension, so never treat those as attachments.
+	if (isRenderedBlobUrl(url)) {
 		return false;
 	}
 

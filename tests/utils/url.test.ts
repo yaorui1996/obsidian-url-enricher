@@ -330,6 +330,8 @@ describe('rewriteUrlForFetch', () => {
 			['https://example.com/song.mp3'],
 			['https://example.com/a.pdf?token=abc#section'],
 			['https://example.com/case.PDF'],
+			['https://raw.githubusercontent.com/dreamrover/phicomm-n1/master/README.md'],
+			['https://github.com/dreamrover/phicomm-n1/raw/master/README.md'],
 		])('returns true for attachment %s', (url) => {
 			expect(isAttachmentUrl(url)).toBe(true);
 		});
@@ -341,6 +343,8 @@ describe('rewriteUrlForFetch', () => {
 			['https://example.com/wiki/Pdf'],
 			['https://example.com/'],
 			['https://example.com'],
+			['https://github.com/dreamrover/phicomm-n1/blob/master/README.md'],
+			['https://gitlab.com/owner/repo/-/blob/main/docs/guide.md'],
 		])('returns false for web page %s', (url) => {
 			expect(isAttachmentUrl(url)).toBe(false);
 		});
