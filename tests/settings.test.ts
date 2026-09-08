@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { App } from './mocks/obsidian';
-import { DEFAULT_SETTINGS, InlineLinkPreviewSettingTab, type InlineLinkPreviewSettings } from '../src/settings';
+import { DEFAULT_SETTINGS, InlineLinkPreviewSettingTab, normalizeSettings, type InlineLinkPreviewSettings } from '../src/settings';
 import type { SettingDefinitionGroup } from 'obsidian';
 
 /**
@@ -179,9 +179,9 @@ describe('Settings', () => {
 				});
 			});
 
-			it('should have exactly 11 fields', () => {
+			it('should have exactly 12 fields', () => {
 				const keys = Object.keys(DEFAULT_SETTINGS);
-				expect(keys).toHaveLength(11);
+				expect(keys).toHaveLength(12);
 			});
 
 			it('should be a valid InlineLinkPreviewSettings object', () => {
@@ -257,6 +257,24 @@ describe('Settings', () => {
 			it('should have maxInlineLength less than maxCardLength by default', () => {
 				expect(DEFAULT_SETTINGS.maxInlineLength).toBeLessThan(DEFAULT_SETTINGS.maxCardLength);
 			});
+		});
+	});
+
+	describe('attachmentSkipRules normalization', () => {
+		it('defaults to an empty array when missing', () => {
+			expect(normalizeSettings({}).attachmentSkipRules).toEqual([]);
+		});
+
+		it('keeps an array of strings', () => {
+			expect(normalizeSettings({ attachmentSkipRules: ['/a/', '/b/'] }).attachmentSkipRules).toEqual(['/a/', '/b/']);
+		});
+
+		it('filters out non-string entries', () => {
+			expect(normalizeSettings({ attachmentSkipRules: ['/a/', 42, null, '/b/'] }).attachmentSkipRules).toEqual(['/a/', '/b/']);
+		});
+
+		it('falls back to [] for non-array input', () => {
+			expect(normalizeSettings({ attachmentSkipRules: 'not-an-array' }).attachmentSkipRules).toEqual([]);
 		});
 	});
 
@@ -382,13 +400,14 @@ describe('Settings', () => {
 		}
 
 		describe('getSettingDefinitions', () => {
-			it('should return the four expected group headings', () => {
+			it('should return the five expected group headings', () => {
 				const tab = createSettingTab(createFakePlugin());
 				const groups = tab.getSettingDefinitions() as SettingDefinitionGroup[];
 				expect(groups.map((g) => g.heading)).toEqual([
 					'Plugin activation',
 					'Preview appearance',
 					'Preview content',
+					'Attachment handling',
 					'Cache management',
 				]);
 			});
@@ -396,9 +415,22 @@ describe('Settings', () => {
 			it('should expose a control for every persisted setting', () => {
 				const tab = createSettingTab(createFakePlugin());
 				const keys = findControlKeys(tab);
-				expect(keys.sort()).toEqual(
-					(Object.keys(DEFAULT_SETTINGS) as (keyof InlineLinkPreviewSettings)[]).sort(),
+				// attachmentSkipRules is a custom <textarea> (render-type), not a
+				// declarative control, so it is asserted separately below.
+				const expected = (Object.keys(DEFAULT_SETTINGS) as (keyof InlineLinkPreviewSettings)[])
+					.filter((key) => key !== 'attachmentSkipRules')
+					.sort();
+				expect(keys.sort()).toEqual(expected);
+			});
+
+			it('should expose a render-based control for attachmentSkipRules', () => {
+				const tab = createSettingTab(createFakePlugin());
+				const groups = tab.getSettingDefinitions() as SettingDefinitionGroup[];
+				const attachmentGroup = groups.find((g) => g.heading === 'Attachment handling');
+				const hasRenderControl = (attachmentGroup?.items ?? []).some(
+					(item) => 'render' in item && typeof item.render === 'function',
 				);
+				expect(hasRenderControl).toBe(true);
 			});
 
 			it('should omit the cache stats entry when there is no favicon cache', () => {

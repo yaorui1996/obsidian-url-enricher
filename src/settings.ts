@@ -26,6 +26,8 @@ export interface InlineLinkPreviewSettings {
 	cardColorMode: PreviewColorMode;
 	showHttpErrorWarnings: boolean;
 	requireFrontmatter: boolean;
+	/** User-configured substring rules: any URL containing one is skipped (no preview) */
+	attachmentSkipRules: string[];
 }
 
 export const DEFAULT_SETTINGS: InlineLinkPreviewSettings = {
@@ -40,6 +42,7 @@ export const DEFAULT_SETTINGS: InlineLinkPreviewSettings = {
 	cardColorMode: "none",
 	showHttpErrorWarnings: true,
 	requireFrontmatter: false,
+	attachmentSkipRules: [],
 };
 
 type SettingKey = keyof InlineLinkPreviewSettings;
@@ -83,6 +86,9 @@ export function normalizeSettings(raw: unknown): InlineLinkPreviewSettings {
 		cardColorMode: oneOf<PreviewColorMode>(data.cardColorMode, ["none", "subtle"], DEFAULT_SETTINGS.cardColorMode),
 		showHttpErrorWarnings: asBoolean(data.showHttpErrorWarnings, DEFAULT_SETTINGS.showHttpErrorWarnings),
 		requireFrontmatter: asBoolean(data.requireFrontmatter, DEFAULT_SETTINGS.requireFrontmatter),
+		attachmentSkipRules: Array.isArray(data.attachmentSkipRules)
+			? (data.attachmentSkipRules as unknown[]).filter((rule): rule is string => typeof rule === "string")
+			: DEFAULT_SETTINGS.attachmentSkipRules,
 	};
 }
 
@@ -214,6 +220,35 @@ export class InlineLinkPreviewSettingTab extends PluginSettingTab {
 								Number.isFinite(value) && value >= REQUEST_TIMEOUT_MIN
 									? undefined
 									: `Must be at least ${REQUEST_TIMEOUT_MIN}`,
+						},
+					},
+				],
+			},
+			{
+				type: "group",
+				heading: "Attachment handling",
+				items: [
+					{
+						name: "Skip attachment URLs",
+						desc: "URLs whose last segment looks like a filename (e.g. ending in .pdf) are never previewed and keep Obsidian's native rendering. Add extra rules below to also skip any URL containing that text.",
+						render: (setting) => {
+							const textarea = createEl("textarea", {
+								cls: "url-enricher-skip-rules",
+								attr: {
+									rows: "3",
+									placeholder: "e.g. /d/picgo/ or alist.yaorui.top",
+								},
+							});
+							textarea.value = this.plugin.settings.attachmentSkipRules.join(", ");
+							textarea.addEventListener("change", () => {
+								this.plugin.settings.attachmentSkipRules = textarea.value
+									.split(/[,\n]/)
+									.map((rule) => rule.trim())
+									.filter(Boolean);
+								void this.plugin.saveSettings();
+								this.plugin.refreshDecorations();
+							});
+							setting.settingEl.appendChild(textarea);
 						},
 					},
 				],

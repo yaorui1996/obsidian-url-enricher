@@ -13,7 +13,7 @@ import { LinkPreviewService } from "./linkPreviewService";
 import type { LinkMetadata } from "./types";
 import type { InlineLinkPreviewSettings } from "../settings";
 import { DEFAULT_SETTINGS } from "../settings";
-import { deriveTitleFromUrl } from "../utils/url";
+import { deriveTitleFromUrl, isAttachmentUrl } from "../utils/url";
 import type { RequestExecutor } from "./MetadataFetcher";
 
 export interface FetchTitleResult {
@@ -27,6 +27,8 @@ export interface FetchTitleResult {
 	siteName: string | null;
 	/** "HTTP 404" / "network:..." when the fetch failed, null on success */
 	error: string | null;
+	/** True when the URL points at an attachment file rather than a web page */
+	isAttachment: boolean;
 }
 
 export interface FetchTitleOptions {
@@ -94,6 +96,20 @@ function buildSettings(options: FetchTitleOptions): InlineLinkPreviewSettings {
  * domain-derived fallback when the page offers nothing usable.
  */
 export async function fetchTitle(url: string, options: FetchTitleOptions = {}): Promise<FetchTitleResult> {
+	// Attachment files (URL's last segment looks like a filename, e.g.
+	// .../test.pdf) are never previewed - they aren't web pages. Report them as
+	// attachments so callers can skip them, with the filename as the title.
+	if (isAttachmentUrl(url)) {
+		return {
+			url,
+			title: deriveAttachmentFilename(url),
+			description: null,
+			siteName: null,
+			error: null,
+			isAttachment: true,
+		};
+	}
+
 	const service = new LinkPreviewService(
 		{ requestTimeoutMs: options.timeoutMs ?? DEFAULT_SETTINGS.requestTimeoutMs },
 		buildSettings(options),
@@ -113,6 +129,7 @@ export async function fetchTitle(url: string, options: FetchTitleOptions = {}): 
 			description: null,
 			siteName: null,
 			error: `network:${message}`,
+			isAttachment: false,
 		};
 	}
 
@@ -123,5 +140,21 @@ export async function fetchTitle(url: string, options: FetchTitleOptions = {}): 
 		description: metadata.description ?? null,
 		siteName: metadata.siteName ?? null,
 		error: metadata.error ?? null,
+		isAttachment: false,
 	};
+}
+
+/**
+ * Derive a display name from an attachment URL: the last path segment
+ * (e.g. "test.pdf" for https://.../d/picgo/test.pdf). Falls back to the raw
+ * URL when it can't be parsed.
+ */
+function deriveAttachmentFilename(url: string): string {
+	try {
+		const parsed = new URL(url);
+		const segments = parsed.pathname.split("/").filter(Boolean);
+		return segments[segments.length - 1] ?? url;
+	} catch {
+		return url;
+	}
 }

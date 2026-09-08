@@ -3,7 +3,7 @@ import { EditorState, RangeSetBuilder } from "@codemirror/state";
 import { EditorView, Decoration, DecorationSet, ViewPlugin, WidgetType } from "@codemirror/view";
 import { editorLivePreviewField } from "obsidian";
 import { createUrlPreviewDecorator } from "../../src/editor/urlPreviewDecorator";
-import { DEFAULT_SETTINGS } from "../../src/settings";
+import { DEFAULT_SETTINGS, type InlineLinkPreviewSettings } from "../../src/settings";
 import type { LinkMetadata } from "../../src/services/types";
 
 /**
@@ -311,5 +311,66 @@ describe("decorator rendering: favicon mode", () => {
 		view.dispatch({ selection: { anchor: 0 } });
 		expect(view.dom.querySelectorAll(".url-preview--inline").length).toBe(3);
 		expect(service.requested).toEqual([]); // still no page fetches
+	});
+});
+
+describe("decorator rendering: attachment URLs are skipped", () => {
+	let view: EditorView | null = null;
+
+	beforeEach(() => {
+		view?.destroy();
+		view = null;
+	});
+
+	function mountWith(
+		doc: string,
+		settings: Partial<InlineLinkPreviewSettings>
+	): { view: EditorView; service: FakeService } {
+		const service = new FakeService();
+		const full = { ...DEFAULT_SETTINGS, ...settings };
+		const plugin = createUrlPreviewDecorator(service as never, () => full);
+		const parent = document.createElement("div");
+		document.body.appendChild(parent);
+		const v = new EditorView({
+			state: EditorState.create({
+				doc,
+				selection: { anchor: 0 },
+				extensions: [editorLivePreviewField, plugin],
+			}),
+			parent,
+		});
+		view = v;
+		return { view: v, service };
+	}
+
+	it("skips a URL with a file-like segment, rendering web URLs normally", () => {
+		const doc = "Web: https://example.com/page\nAttachment: https://alist.yaorui.top/d/picgo/test.pdf";
+		const { service } = mountWith(doc, { previewStyle: "favicon" });
+
+		expect(view!.dom.querySelectorAll(".url-preview--inline").length).toBe(1);
+		const titles = Array.from(view!.dom.querySelectorAll(".url-preview__title")).map(
+			(e) => e.textContent ?? ""
+		);
+		expect(titles).toEqual(["https://example.com/page"]);
+		expect(service.faviconRequested).not.toContain("https://alist.yaorui.top/d/picgo/test.pdf");
+	});
+
+	it("skips URLs matching a configured skip rule", () => {
+		const doc = "Web: https://example.com/page\nSkip: https://alist.yaorui.top/d/picgo/note.pdf";
+		const { service } = mountWith(doc, {
+			previewStyle: "favicon",
+			attachmentSkipRules: ["/d/picgo/"],
+		});
+
+		expect(view!.dom.querySelectorAll(".url-preview--inline").length).toBe(1);
+		expect(service.faviconRequested).not.toContain("https://alist.yaorui.top/d/picgo/note.pdf");
+	});
+
+	it("skips attachments in inline mode too", () => {
+		const doc = "Web: https://example.com/page\nAttachment: https://alist.yaorui.top/d/picgo/test.pdf";
+		const { service } = mountWith(doc, { previewStyle: "inline" });
+
+		expect(view!.dom.querySelectorAll(".url-preview--inline").length).toBe(1);
+		expect(service.requested).not.toContain("https://alist.yaorui.top/d/picgo/test.pdf");
 	});
 });

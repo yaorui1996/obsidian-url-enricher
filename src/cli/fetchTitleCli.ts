@@ -8,8 +8,8 @@
  *   node dist/fetch-title.cjs --plain https://github.com
  *
  * Output: one JSON object per line on stdout ({"url", "title", "description",
- * "siteName", "error"}); --plain prints just the title text. Diagnostics and
- * non-zero exit on hard failures go through stderr.
+ * "siteName", "error", "isAttachment"}); --plain prints just the title text.
+ * Diagnostics and non-zero exit on hard failures go through stderr.
  */
 
 import { fetchTitle } from "../services/fetchTitle";
@@ -51,7 +51,7 @@ function printUsage(): void {
 			"  --timeout <ms>   Request timeout in milliseconds (default: 7000)",
 			"  --help, -h       Show this help",
 			"",
-			"Output: one JSON object per line (url, title, description, siteName, error)",
+			"Output: one JSON object per line (url, title, description, siteName, error, isAttachment)",
 		].join("\n") + "\n"
 	);
 }

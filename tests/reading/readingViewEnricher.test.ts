@@ -261,4 +261,33 @@ describe('reading view enricher', () => {
 			expect(service.faviconRequested).toHaveLength(1);
 		});
 	});
+
+	describe('attachment URLs are skipped', () => {
+		it('does not touch an anchor whose href looks like a file', () => {
+			container.innerHTML =
+				'<a href="https://alist.yaorui.top/d/picgo/test.pdf" class="external-link">test.pdf</a>';
+			run(createProcessor(service, { previewStyle: 'favicon' }), container);
+
+			expect(pills(container)).toHaveLength(0);
+			expect(container.querySelector('a')).not.toBeNull();
+			expect(service.faviconRequested).toHaveLength(0);
+		});
+
+		it('leaves a bare attachment URL in a text node alone', () => {
+			container.innerHTML = '<p>see https://alist.yaorui.top/d/picgo/test.pdf here</p>';
+			run(createProcessor(service, { previewStyle: 'favicon' }), container);
+
+			expect(pills(container)).toHaveLength(0);
+			expect(container.querySelector('p')?.textContent).toBe(
+				'see https://alist.yaorui.top/d/picgo/test.pdf here'
+			);
+		});
+
+		it('skips URLs matching a configured skip rule', () => {
+			container.innerHTML = '<a href="https://alist.yaorui.top/d/picgo/note.pdf">x</a>';
+			run(createProcessor(service, { previewStyle: 'favicon', attachmentSkipRules: ['/d/picgo/'] }), container);
+
+			expect(pills(container)).toHaveLength(0);
+		});
+	});
 });

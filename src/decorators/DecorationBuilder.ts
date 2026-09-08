@@ -16,7 +16,7 @@ import {
 	MIN_DESCRIPTION_LENGTH,
 	TITLE_SEPARATOR_LENGTH
 } from "../constants";
-import { deriveTitleFromUrl } from "../utils/url";
+import { deriveTitleFromUrl, isAttachmentUrl, matchesAnyRule } from "../utils/url";
 
 /**
  * Helper functions for text processing
@@ -287,6 +287,13 @@ export function buildUrlDecorations(
 		// Check for code block context
 		const node = tree.resolveInner(start, 1);
 		if (isInCodeBlock(node, start)) {
+			return;
+		}
+
+		// Skip attachment files (the URL's last segment looks like a filename,
+		// e.g. .../test.pdf) and any URL matching a user-configured skip rule.
+		// These keep Obsidian's native rendering instead of a preview capsule.
+		if (isAttachmentUrl(url) || matchesAnyRule(url, globalSettings.attachmentSkipRules)) {
 			return;
 		}
 

@@ -46,6 +46,7 @@ describe("fetchTitle", () => {
 			description: "A fine page.",
 			siteName: "Example",
 			error: null,
+			isAttachment: false,
 		});
 	});
 
@@ -77,15 +78,39 @@ describe("fetchTitle", () => {
 
 	it("falls back to hostname title for non-HTML content", async () => {
 		const executor = makeExecutor({
+			"https://example.com/raw": {
+				body: "binary blob",
+				contentType: "application/octet-stream",
+			},
+		});
+
+		const result = await fetchTitle("https://example.com/raw", { requestExecutor: executor });
+		expect(result.error).toBeNull();
+		expect(result.title).toBe("example.com");
+		expect(result.isAttachment).toBe(false);
+	});
+
+	it("flags an attachment URL without fetching, using the filename as title", async () => {
+		const executor = makeExecutor({});
+		const result = await fetchTitle("https://alist.yaorui.top/d/picgo/test.pdf", {
+			requestExecutor: executor,
+		});
+		expect(result.isAttachment).toBe(true);
+		expect(result.title).toBe("test.pdf");
+		expect(result.description).toBeNull();
+		expect(result.error).toBeNull();
+	});
+
+	it("reports attachments even when the fetch would have a body", async () => {
+		const executor = makeExecutor({
 			"https://example.com/doc.pdf": {
 				body: "%PDF-1.4 fake",
 				contentType: "application/pdf",
 			},
 		});
-
 		const result = await fetchTitle("https://example.com/doc.pdf", { requestExecutor: executor });
-		expect(result.error).toBeNull();
-		expect(result.title).toBe("example.com");
+		expect(result.isAttachment).toBe(true);
+		expect(result.title).toBe("doc.pdf");
 	});
 
 	it("surfaces network failures as error with hostname title", async () => {

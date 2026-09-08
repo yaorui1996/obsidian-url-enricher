@@ -75,6 +75,76 @@ export function deriveTitleFromUrl(url: string): string {
 	}
 }
 
+/**
+ * File extensions that look like files but are actually served as web pages
+ * or resources. A URL ending in one of these is NOT an attachment - it's the
+ * web page itself, so it still deserves a preview.
+ */
+const WEB_PAGE_EXTENSIONS = new Set([
+	"html",
+	"htm",
+	"php",
+	"asp",
+	"aspx",
+	"jsp",
+	"xml",
+	"rss",
+	"js",
+	"css",
+]);
+
+/**
+ * Decide whether a URL points at an attachment file rather than a web page.
+ *
+ * Judgment is purely static - no request is made - so the favicon style (which
+ * never fetches the target page) still works. The rule is "the last path
+ * segment looks like a filename": it has an extension, and that extension is
+ * not a known web-page suffix. This catches https://alist.yaorui.top/d/picgo/test.pdf
+ * while leaving /blog and /about.html (both pages) alone.
+ *
+ * query/hash are ignored (URL.pathname excludes them), so
+ * .../test.pdf?token=abc still resolves.
+ */
+export function isAttachmentUrl(url: string): boolean {
+	let parsed: URL;
+	try {
+		parsed = new URL(url);
+	} catch {
+		return false;
+	}
+
+	if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+		return false;
+	}
+
+	const segments = parsed.pathname.split("/").filter(Boolean);
+	const lastSegment = segments[segments.length - 1] ?? "";
+	if (!lastSegment || !lastSegment.includes(".")) {
+		return false;
+	}
+
+	const extension = lastSegment.slice(lastSegment.lastIndexOf(".") + 1).toLowerCase();
+	if (!extension) {
+		return false;
+	}
+
+	return !WEB_PAGE_EXTENSIONS.has(extension);
+}
+
+/**
+ * True when the URL contains any of the given comma/newline-separated rules
+ * as a substring. Used for user-configured skip rules (e.g. "/d/picgo/").
+ */
+export function matchesAnyRule(url: string, rules: string[] | undefined): boolean {
+	if (!rules || rules.length === 0) {
+		return false;
+	}
+	return rules.some((rule) => {
+		const trimmed = (rule ?? "").trim();
+		return trimmed.length > 0 && url.includes(trimmed);
+	});
+}
+
 const WHITESPACE_ONLY_REGEX = /^\s*$/;
 
 export interface UrlListEntry {

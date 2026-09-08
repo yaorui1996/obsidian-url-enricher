@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { extractSingleUrl, looksLikeUrl, extractUrlList, rewriteUrlForFetch, type UrlListEntry } from '../../src/utils/url';
+import { extractSingleUrl, looksLikeUrl, extractUrlList, rewriteUrlForFetch, isAttachmentUrl, matchesAnyRule, type UrlListEntry } from '../../src/utils/url';
 import { VALID_URLS, INVALID_URLS, WRAPPED_URLS, MULTIPLE_URL_TEXT } from '../fixtures/url-samples';
 import { expectValidUrl, expectUrlListEntry } from '../helpers/assertion-helpers';
 
@@ -320,5 +320,60 @@ describe('rewriteUrlForFetch', () => {
 		expect(rewriteUrlForFetch('not a url')).toBe('not a url');
 	});
 });
+
+	describe('isAttachmentUrl', () => {
+		it.each([
+			['https://alist.yaorui.top/d/picgo/test.pdf'],
+			['https://example.com/download/file.pdf'],
+			['https://example.com/files/report.zip'],
+			['https://example.com/img/photo.png'],
+			['https://example.com/song.mp3'],
+			['https://example.com/a.pdf?token=abc#section'],
+			['https://example.com/case.PDF'],
+		])('returns true for attachment %s', (url) => {
+			expect(isAttachmentUrl(url)).toBe(true);
+		});
+
+		it.each([
+			['https://example.com/blog'],
+			['https://example.com/about.html'],
+			['https://example.com/index.php'],
+			['https://example.com/wiki/Pdf'],
+			['https://example.com/'],
+			['https://example.com'],
+		])('returns false for web page %s', (url) => {
+			expect(isAttachmentUrl(url)).toBe(false);
+		});
+
+		it('returns false for non-http protocols', () => {
+			expect(isAttachmentUrl('file:///C:/x/test.pdf')).toBe(false);
+			expect(isAttachmentUrl('ftp://example.com/test.pdf')).toBe(false);
+		});
+
+		it('returns false for invalid URL', () => {
+			expect(isAttachmentUrl('not a url')).toBe(false);
+		});
+	});
+
+	describe('matchesAnyRule', () => {
+		it('returns true when the URL contains a rule', () => {
+			expect(matchesAnyRule('https://alist.yaorui.top/d/picgo/x.pdf', ['/d/picgo/'])).toBe(true);
+			expect(matchesAnyRule('https://example.com/a.pdf', ['alist.yaorui.top'])).toBe(false);
+		});
+
+		it('returns true when any of several rules match', () => {
+			expect(matchesAnyRule('https://example.com/b.pdf', ['/d/picgo/', '/b.pdf'])).toBe(true);
+		});
+
+		it('returns false for empty or undefined rules', () => {
+			expect(matchesAnyRule('https://example.com/a.pdf', [])).toBe(false);
+			expect(matchesAnyRule('https://example.com/a.pdf', undefined)).toBe(false);
+		});
+
+		it('ignores blank rules and trims whitespace', () => {
+			expect(matchesAnyRule('https://example.com/a.pdf', ['  ', '/a.pdf'])).toBe(true);
+			expect(matchesAnyRule('https://example.com/a.pdf', ['   '])).toBe(false);
+		});
+	});
 
 });

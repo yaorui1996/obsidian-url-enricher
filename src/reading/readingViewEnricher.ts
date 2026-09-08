@@ -8,7 +8,7 @@ import type { LinkMetadata } from "../services/types";
 import { UrlPreviewWidget } from "../decorators/PreviewWidget";
 import { processMetadata, calculateMaxLength } from "../decorators/DecorationBuilder";
 import { parsePageConfigFromFrontmatter } from "../decorators/FrontmatterParser";
-import { URL_IN_TEXT_REGEX } from "../utils/url";
+import { URL_IN_TEXT_REGEX, isAttachmentUrl, matchesAnyRule } from "../utils/url";
 
 /**
  * Reading view (preview mode) support for the favicon preview style.
@@ -55,6 +55,13 @@ function buildPreviewElement(
 	settings: InlineLinkPreviewSettings,
 	pageConfig: ReturnType<typeof parsePageConfigFromFrontmatter>
 ): HTMLElement | null {
+	// Skip attachment files (URL's last segment looks like a filename) and any
+	// URL matching a user-configured skip rule - they keep Obsidian's native
+	// rendering instead of a preview pill.
+	if (isAttachmentUrl(url) || matchesAnyRule(url, settings.attachmentSkipRules)) {
+		return null;
+	}
+
 	const previewStyle = pageConfig.previewStyle ?? settings.previewStyle;
 	if (previewStyle !== "favicon") {
 		return null;
