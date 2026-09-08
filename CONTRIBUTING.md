@@ -236,7 +236,7 @@ git config core.hooksPath .husky
 ```
 
 **Never commit build artifacts**
-- ❌ `main.js` (generated)
+- ❌ `dist/` (all build output — plugin `dist/main.js`, CLI `dist/fetch-title.cjs`)
 - ❌ `node_modules/` (dependencies)
 - ✅ Only commit source files
 

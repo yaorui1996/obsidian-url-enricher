@@ -9,11 +9,8 @@
 node_modules
 coverage/
 
-# Don't include the compiled main.js file in the repo.
-# They should be uploaded to GitHub releases instead.
-main.js
-
-# fetch-title CLI bundle (built from src/cli/ by npm run build)
+# Don't include the compiled plugin bundle or the fetch-title CLI bundle.
+# They should be uploaded to GitHub releases (plugin) / used locally (CLI) instead.
 dist/
 
 # Exclude sourcemaps

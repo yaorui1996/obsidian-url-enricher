@@ -7,6 +7,8 @@
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
 		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
+		"build:cli": "node esbuild.cli.config.mjs",
+		"build:all": "npm run build && npm run build:cli",
 		"lint": "eslint .",
 		"lint:fix": "eslint . --fix",
 		"set-version": "node version-bump.mjs",

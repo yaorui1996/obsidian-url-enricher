@@ -8,8 +8,8 @@ This plugin adds rich, non-destructive link previews to Obsidian. URLs remain as
 
 - **Current version**: 1.4.0
 - **Plugin ID**: `url-enricher` (renamed from `obsidian-inline-link-preview` in 0.9.0)
-- **Entry point**: [src/main.ts](../../src/main.ts) → compiled to `main.js`
-- **Release artifacts**: `main.js`, `manifest.json`, `styles.css`
+- **Entry point**: [src/main.ts](../../src/main.ts) → compiled to `dist/main.js` (plugin bundle)
+- **Release artifacts**: `dist/main.js`, `manifest.json`, `styles.css`
 - **Developer API**: `window.urlEnricher` (also `window.inlineLinkPreview` for compatibility)
 
 ## Obsidian Plugin Guidelines
@@ -40,7 +40,8 @@ All network activity is documented in README.md under "Privacy & Network Usage" 
 ```bash
 npm install                    # Install dependencies
 npm run dev                    # Watch mode (rebuilds on changes)
-npm run build                  # Production build (type-check + bundle)
+npm run build                  # Production build → dist/main.js (plugin)
+npm run build:cli              # Build the fetch-title CLI → dist/fetch-title.cjs
 npm run lint                   # Run ESLint (enforces Obsidian plugin requirements)
 npm test                       # Run all 618 tests
 npm run set-version X.Y.Z      # Bump version (updates 6 files)
@@ -82,7 +83,7 @@ src/
     logger.ts                # Structured logging (4 log levels)
     performance.ts           # Performance tracking and profiling
   cli/                       # Node-only entry points (NOT loaded by the plugin)
-    fetchTitleCli.ts         # fetch-title CLI: URL → preview text, bundled to dist/fetch-title.cjs
+    fetchTitleCli.ts         # fetch-title CLI: URL → preview text, bundled to dist/fetch-title.cjs via npm run build:cli
     obsidian-stub.ts         # Stand-in for the obsidian package used by the CLI bundle only
 tests/
   # 618 tests across 14 test files, 100% pass rate
@@ -168,9 +169,8 @@ npm run build && npm run lint && npm test
 ```
 
 **6. Never commit build artifacts**
-- ❌ `main.js` (generated)
+- ❌ `dist/` (all build output — plugin `dist/main.js`, CLI `dist/fetch-title.cjs`)
 - ❌ `node_modules/` (dependencies)
-- ❌ `dist/` (build output)
 - ✅ Only commit source files
 
 **7. Constants must go in constants.ts**

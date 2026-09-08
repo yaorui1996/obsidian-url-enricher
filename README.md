@@ -29,7 +29,8 @@ preview-style: favicon
 The plugin's title-resolution pipeline is also packaged as a standalone Node CLI, so external tools (e.g. openclaw) can ask "what text would the plugin display for this URL?" without running Obsidian:
 
 ```powershell
-npm run build                                            # produces dist/fetch-title.cjs
+npm run build                                            # plugin → dist/main.js
+npm run build:cli                                        # CLI → dist/fetch-title.cjs
 npm run fetch-title -- https://obsidian.md               # JSON: {url, title, description, siteName, error, isAttachment}
 npm run fetch-title -- --plain https://obsidian.md       # title text only
 npm run fetch-title -- --timeout 5000 https://github.com # custom timeout (ms)
@@ -76,7 +77,8 @@ preview-style: favicon
 插件的标题解析管线同时打包成了独立的 Node CLI，让外部工具（如 openclaw）不跑 Obsidian 也能问"这个 URL 插件会显示什么文字"：
 
 ```powershell
-npm run build                                            # 产出 dist/fetch-title.cjs
+npm run build                                            # 插件 → dist/main.js
+npm run build:cli                                        # CLI → dist/fetch-title.cjs
 npm run fetch-title -- https://obsidian.md               # JSON: {url, title, description, siteName, error, isAttachment}
 npm run fetch-title -- --plain https://obsidian.md       # 只输出标题文本
 npm run fetch-title -- --timeout 5000 https://github.com # 自定义超时（毫秒）

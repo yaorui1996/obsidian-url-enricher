@@ -80,7 +80,7 @@ jobs:
         uses: actions/attest-build-provenance@v2
         with:
           subject-path: |
-            main.js
+            dist/main.js
             manifest.json
             styles.css
 
@@ -141,7 +141,7 @@ jobs:
             
             **Full Changelog**: https://github.com/${{ github.repository }}/compare/${{ steps.changelog.outputs.PREVIOUS_TAG }}...${{ steps.get_version.outputs.VERSION }}
           files: |
-            main.js
+            dist/main.js
             manifest.json
             styles.css
           draft: false

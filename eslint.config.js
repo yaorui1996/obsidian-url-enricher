@@ -4,12 +4,12 @@ import { defineConfig } from "eslint/config";
 export default defineConfig([
 	{
 		ignores: [
-			"main.js",
 			"dist/**",
 			"node_modules/**",
 			"coverage/**",
 			"version-bump.mjs",
 			"esbuild.config.mjs",
+			"esbuild.cli.config.mjs",
 			"vitest.config.ts",
 			"tests/**",
 		],

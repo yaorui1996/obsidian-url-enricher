@@ -39,7 +39,7 @@ jobs:
         with:
           name: build-artifacts
           path: |
-            main.js
+            dist/main.js
             manifest.json
             styles.css
           retention-days: 7
