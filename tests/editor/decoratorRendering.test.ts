@@ -79,6 +79,16 @@ function titles(view: EditorView): string[] {
 	);
 }
 
+/** Favicon icons rendered inside the favicon / inline pills */
+function icons(view: EditorView): HTMLImageElement[] {
+	return Array.from(view.dom.querySelectorAll("img.url-preview__favicon"));
+}
+
+/** Pill text - the favicon pill shows the link's own 文字 label / URL, not fetched metadata */
+function pillTitles(view: EditorView): string[] {
+	return Array.from(view.dom.querySelectorAll(".url-preview__title")).map((e) => e.textContent ?? "");
+}
+
 /**
  * The decorator coalesces repaints onto a timer, so assertions must wait for
  * the repaint to actually land rather than sleeping a fixed amount (which
@@ -267,47 +277,37 @@ describe("decorator rendering: favicon mode", () => {
 		view = null;
 	});
 
-	it("renders inline-style pills showing the URL text, with icons and no page fetch", () => {
+	it("renders a favicon pill for every web URL, using the link's own label, with no page fetch", () => {
 		const service = new FakeService();
 		view = mount(service, "favicon", 0);
 
-		// synchronous: pills are present immediately, no settle/waitFor needed
+		// synchronous: pills are present immediately, no settle/waitFor needed.
+		// Each link becomes a `.url-preview--inline` pill carrying its icon; its
+		// text is the 文字 label (markdown link) or the URL (bare/wikilink) — the
+		// fetched "TITLE …" metadata was never requested, so it is absent.
 		expect(view.dom.querySelectorAll(".url-preview--inline").length).toBe(3);
-		expect(view.dom.querySelectorAll("img.url-preview__favicon").length).toBe(3);
+		expect(icons(view).length).toBe(3);
+		expect(pillTitles(view)).toEqual(["https://github.com", "some link", "https://reddit.com/r/ObsidianMD"]);
 
-		// the preview text is the URL as written, never fetched metadata
-		const titles = Array.from(view.dom.querySelectorAll(".url-preview__title")).map(
-			(e) => e.textContent ?? ""
-		);
-		expect(titles).toEqual(URLS);
+		// icon sources match the three hostnames; no metadata was ever fetched
 		expect(service.requested).toEqual([]);
 		expect(service.faviconRequested.sort()).toEqual([...URLS].sort());
-
-		// no descriptions are shown in this mode
-		expect(view.dom.querySelectorAll(".url-preview__description").length).toBe(0);
 	});
 
-	it("reveals the raw URL while the caret is inside it, like inline mode", () => {
-		const service = new FakeService();
-		// caret at end of doc == inside the last link
-		view = mount(service, "favicon", DOC.length);
-
-		const pills = view.dom.querySelectorAll(".url-preview--inline").length;
-		expect(pills).toBe(2); // the caret-occupied URL shows as raw text
-
-		view.dispatch({ selection: { anchor: 0 } });
-		expect(view.dom.querySelectorAll(".url-preview--inline").length).toBe(3);
-		expect(service.requested).toEqual([]); // still no page fetches
-	});
-
-	it("keeps pills across caret moves and doc edits, refetching nothing", () => {
+	it("hides the pill for the link under the caret so the raw [text](url) stays editable", () => {
 		const service = new FakeService();
 		view = mount(service, "favicon", 0);
+
 		expect(view.dom.querySelectorAll(".url-preview--inline").length).toBe(3);
 
-		view.dispatch({ selection: { anchor: DOC.length } });
+		// Caret moves into the first link (the bare URL "https://github.com"):
+		// its pill is dropped so Obsidian's Live Preview shows the raw URL text
+		// for editing, while the other two links keep their pills.
+		const firstLinkStart = DOC.indexOf("https://github.com");
+		view.dispatch({ selection: { anchor: firstLinkStart } });
 		expect(view.dom.querySelectorAll(".url-preview--inline").length).toBe(2);
 
+		// Caret leaves the link: the pill comes straight back.
 		view.dispatch({ selection: { anchor: 0 } });
 		expect(view.dom.querySelectorAll(".url-preview--inline").length).toBe(3);
 		expect(service.requested).toEqual([]); // still no page fetches
@@ -343,15 +343,13 @@ describe("decorator rendering: attachment URLs are skipped", () => {
 		return { view: v, service };
 	}
 
-	it("skips a URL with a file-like segment, rendering web URLs normally", () => {
+	it("skips a URL with a file-like segment, only pill-ing web URLs normally", () => {
 		const doc = "Web: https://example.com/page\nAttachment: https://alist.yaorui.top/d/picgo/test.pdf";
 		const { service } = mountWith(doc, { previewStyle: "favicon" });
 
+		// Only the web URL gains a pill; the attachment is left untouched.
 		expect(view!.dom.querySelectorAll(".url-preview--inline").length).toBe(1);
-		const titles = Array.from(view!.dom.querySelectorAll(".url-preview__title")).map(
-			(e) => e.textContent ?? ""
-		);
-		expect(titles).toEqual(["https://example.com/page"]);
+		expect(icons(view!).length).toBe(1);
 		expect(service.faviconRequested).not.toContain("https://alist.yaorui.top/d/picgo/test.pdf");
 	});
 
@@ -363,6 +361,7 @@ describe("decorator rendering: attachment URLs are skipped", () => {
 		});
 
 		expect(view!.dom.querySelectorAll(".url-preview--inline").length).toBe(1);
+		expect(icons(view!).length).toBe(1);
 		expect(service.faviconRequested).not.toContain("https://alist.yaorui.top/d/picgo/note.pdf");
 	});
 

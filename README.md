@@ -10,12 +10,12 @@ Fork of [mattmarotta/obsidian-url-enricher](https://github.com/mattmarotta/obsid
 
 ### Favicon preview style
 
-A third preview style, `Favicon`, that looks like the inline style (favicon + pill background + plugin font) but shows the **URL text as written** instead of a fetched page title:
+A third preview style, `Favicon`, that renders each link as an **inline pill: the site favicon icon + the link's own 文字 label**, with the URL kept as the click target. It is the least invasive style: the label and destination stay exactly as you wrote them, the markdown `[text](url)` is never modified, no page is fetched, and the only outbound call is the Google favicon service (cached for 30 days):
 
-- **No page fetches** — the linked page is never requested; no metadata (title/description) is fetched at all. Only the Google favicon service is contacted for the icon (cached for 30 days)
-- **Text is the URL itself** — the preview shows the exact URL from your markdown, never replaced by fetched content
-- Like the inline style, the URL is revealed as raw text while the caret is inside it
-- **Works in Reading view too** — a markdown post processor renders the same pill in Reading view (Live Preview stays non-destructive; Reading view replaces the rendered link element with the pill, the markdown file is still never modified). inline/card styles remain Live-Preview-only
+- **A pill around your own text** — `[文档](https://example.com)` renders as `(icon) 文档` inside a pill (favicon + the label you wrote); the URL is the link target, unchanged
+- **Editing-friendly** — while the caret is inside the link, the pill yields so Obsidian's Live Preview shows the raw `[text](url)` for editing; it returns once you move the caret away
+- **No page fetches** — no metadata (title/description) is fetched at all; only the Google favicon service is contacted for the icon
+- **Works in Reading view too** — a markdown post processor renders the same pill in Reading view (Live Preview and Reading view are both non-destructive; the markdown file is never modified). inline/card styles remain Live-Preview-only
 - Set it globally in the plugin settings (Preview style → `Favicon`), or per note via frontmatter:
 
 ```yaml
@@ -57,12 +57,12 @@ Not every URL is a web page — notes often link to files (pdf, zip, images, …
 
 ### Favicon 预览模式
 
-新增第三种预览风格 `Favicon`，视觉上和 inline 一样（图标 + 胶囊底色 + 插件字体），但显示的是 **URL 原文**而不是抓取的页面标题：
+新增第三种预览风格 `Favicon`，把每个链接渲染成**行内胶囊：站点 favicon 图标 + 链接自己的文字标签**，URL 仍是跳转目标。这是改动最小的风格：文字和目标保持你写的原样，`[文字](URL)` 源码一字不改，不抓页面，唯一外呼是 Google favicon 服务（缓存 30 天）：
 
-- **不抓取网页** —— 完全不请求链接页面，不获取标题/描述元数据。只有 favicon 图标走 Google favicon 服务（缓存 30 天）
-- **文字就是 URL 本身** —— 预览里显示的正是 markdown 里写的那个 URL，永远不会被替换成抓取来的内容
-- 和 inline 一样：光标移进 URL 时会露出原始文本方便编辑
-- **阅读模式同样生效** —— 通过 markdown post processor 在阅读视图渲染同样的胶囊（Live Preview 本就不改源码；阅读视图只是把渲染出来的链接元素替换成胶囊，markdown 文件依旧永不被修改）。inline/card 仍仅限 Live Preview
+- **胶囊包住你自己的文字** —— `[文档](https://example.com)` 渲染成胶囊 `(icon) 文档`（favicon + 你写的文字）；URL 作为链接目标不变
+- **编辑友好** —— 光标落在链接内时，胶囊让位，Obsidian Live Preview 显示原始 `[文字](URL)` 供修改；光标移开后胶囊自动回来
+- **不抓取网页** —— 完全不请求链接页面，不获取标题/描述元数据。只有 favicon 图标走 Google favicon 服务
+- **阅读模式同样生效** —— 通过 markdown post processor 在阅读视图渲染同样的胶囊（Live Preview 和阅读视图都不改源码，markdown 文件永不被修改）。inline/card 仍仅限 Live Preview
 - 全局设置：插件设置里 Preview style 选 `Favicon`；或按笔记用 frontmatter 覆盖：
 
 ```yaml

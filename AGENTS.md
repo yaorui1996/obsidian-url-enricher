@@ -96,7 +96,7 @@ eslint.config.js             # ESLint v9 flat config (enforces Obsidian plugin r
 **Preview Styles**: Three styles available:
 - **Inline** (renamed from "bubble" in 0.9.0): Compact preview with favicon + title
 - **Card**: Full preview with image, title, description, favicon, URL
-- **Favicon** (fork addition): Inline look but the text is the URL itself; no page fetches. The only style that renders in Reading view
+- **Favicon** (fork addition): The link is rendered as an inline pill (`.url-preview--inline`: favicon icon + the link's own 文字 label), keeping the label and URL exactly as written — the `[text](url)` markdown is never modified, and the URL stays the click target. No page fetches; only the Google favicon service is contacted. In Live Preview it's a `Decoration.replace` pill in `DecorationBuilder.processUrlMatch` (skipped while the caret is inside the link, so the raw `[text](url)` shows for editing); in Reading view the post processor replaces each anchor with the same pill. The only style that renders in Reading view
 - **Attachment exclusion** (fork addition): URLs whose last path segment looks like a file (has an extension that isn't a web-page suffix) are skipped entirely — no preview, no request, Obsidian's native rendering kept. Judgment is static (`isAttachmentUrl` in `src/utils/url.ts`, no network); `attachmentSkipRules` adds extra substring rules. Applies in `DecorationBuilder.processUrlMatch` and `readingViewEnricher.buildPreviewElement`; the fetch-title CLI flags them via `isAttachment`
 
 **Type Safety**: 100% type-safe codebase. Zero `any` types. Use `unknown` with type guards for external data.

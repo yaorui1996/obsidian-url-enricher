@@ -12,6 +12,7 @@ All notable changes to URL Enricher will be documented in this file.
 - Release workflow now verifies the tag matches `manifest.json` and `versions.json`, has no `v` prefix, and is reachable from `master` before publishing
 
 ### Changed
+- **Fork: favicon style renders the link as an inline pill** — the site favicon icon plus the link's own 文字 label, with the URL kept as the click target. The label and the `[text](url)` markdown are left exactly as written, no page is fetched, and only the Google favicon service is contacted. The pill yields to Obsidian's Live Preview while the caret is inside the link (so the raw `[text](url)` shows for editing) and returns on blur; it also renders in Reading view
 - Settings loaded from disk are now validated. Out-of-range numbers are clamped, numeric strings are converted, and unrecognised values fall back to their default instead of reaching the preview renderer. Settings removed in earlier versions no longer linger in `data.json`
 - Length and timeout limits come from a single set of constants, so the settings panel, frontmatter overrides, and stored settings all enforce the same bounds
 - Release documentation follows the protected-branch PR workflow: the version bump lands via its own pull request and the tag is pushed only after that merge

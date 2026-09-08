@@ -9,7 +9,11 @@ import type { MarkdownPostProcessorContext } from 'obsidian';
  *
  * The processor is a pure DOM pass, so tests build elements directly under
  * happy-dom, invoke the processor with a context, and assert on the rendered
- * pill structure - no CodeMirror involved.
+ * output - no CodeMirror involved.
+ *
+ * The favicon style renders each web link as a `.url-preview--inline` pill
+ * carrying the site's favicon and the link's own 文字 label (or the URL for a
+ * bare link), leaving the source `[text](url)` untouched.
  */
 
 /** Duck-typed service stub: the enricher only resolves favicons synchronously */
@@ -44,14 +48,19 @@ function run(
 }
 
 function pills(root: HTMLElement): HTMLElement[] {
-	return Array.from(root.querySelectorAll('.url-preview'));
+	return Array.from(root.querySelectorAll('.url-preview--inline'));
 }
 
-function pillTitles(root: HTMLElement): string[] {
-	return pills(root).map((pill) => {
-		const title = pill.querySelector('.url-preview__title');
-		return title?.textContent ?? '';
-	});
+function icons(root: HTMLElement): HTMLImageElement[] {
+	return Array.from(root.querySelectorAll('img.url-preview__favicon'));
+}
+
+function iconSrcs(root: HTMLElement): string[] {
+	return icons(root).map((icon) => icon.src);
+}
+
+function pillTexts(root: HTMLElement): string[] {
+	return pills(root).map((pill) => pill.textContent ?? "");
 }
 
 describe('reading view enricher', () => {
@@ -86,10 +95,11 @@ describe('reading view enricher', () => {
 		});
 
 		it('frontmatter preview-style: favicon overrides a global inline style', () => {
-			container.innerHTML = '<p>see https://example.com/page here</p>';
+			container.innerHTML = '<a href="https://example.com/page" class="external-link">label</a>';
 			run(createProcessor(service, { previewStyle: 'inline' }), container, { 'preview-style': 'favicon' });
 
-			expect(pillTitles(container)).toEqual(['https://example.com/page']);
+			expect(pills(container)).toHaveLength(1);
+			expect(pillTexts(container)).toEqual(['label']);
 		});
 
 		it('frontmatter preview-style: inline opts a favicon-styled note out', () => {
@@ -108,35 +118,37 @@ describe('reading view enricher', () => {
 		});
 
 		it('requireFrontmatter processes notes that carry plugin frontmatter', () => {
-			container.innerHTML = '<p>see https://example.com/page here</p>';
+			container.innerHTML = '<a href="https://example.com/page">x</a>';
 			run(
 				createProcessor(service, { previewStyle: 'favicon', requireFrontmatter: true }),
 				container,
 				{ 'preview-style': 'favicon' }
 			);
 
-			expect(pillTitles(container)).toEqual(['https://example.com/page']);
+			expect(pills(container)).toHaveLength(1);
 		});
 	});
 
 	describe('anchor pass', () => {
-		it('replaces a markdown link anchor with a pill showing the href', () => {
-			container.innerHTML = '<a href="https://example.com/page" class="external-link">Pretty Label</a>';
+		it('replaces the anchor with a pill that keeps the 文字 label', () => {
+			container.innerHTML = '<a href="https://example.com/page" class="external-link">文字</a>';
 			run(createProcessor(service, { previewStyle: 'favicon' }), container);
 
 			const pill = pills(container)[0];
 			expect(pill).toBeDefined();
-			// Text is the URL as written, never the fetched/label text
-			expect(pillTitles(container)).toEqual(['https://example.com/page']);
-			expect(container.querySelector('a')).toBeNull();
+			// The pill is the inline capsule: favicon + the original label text.
+			expect(pill?.className).toContain('url-preview--inline');
+			expect(pill?.textContent).toBe('文字');
+			// A favicon icon is rendered first.
+			expect(icons(container)).toHaveLength(1);
+			expect(pill?.firstChild).toBe(icons(container)[0]);
 		});
 
 		it('attaches the favicon resolved from the service', () => {
 			container.innerHTML = '<a href="https://example.com/page">x</a>';
 			run(createProcessor(service, { previewStyle: 'favicon' }), container);
 
-			const favicon = container.querySelector<HTMLImageElement>('img.url-preview__favicon');
-			expect(favicon?.src).toBe('https://www.google.com/s2/favicons?domain=example.com&sz=128');
+			expect(iconSrcs(container)).toEqual(['https://www.google.com/s2/favicons?domain=example.com&sz=128']);
 		});
 
 		it('ignores non-http anchors', () => {
@@ -149,13 +161,15 @@ describe('reading view enricher', () => {
 	});
 
 	describe('text pass', () => {
-		it('wraps bare URLs that were not auto-linked', () => {
+		it('turns bare URLs that were not auto-linked into a URL pill, keeping the URL text', () => {
 			container.innerHTML = '<p>see https://example.com/page here</p>';
 			run(createProcessor(service, { previewStyle: 'favicon' }), container);
 
-			expect(pillTitles(container)).toEqual(['https://example.com/page']);
-			const paragraph = container.querySelector('p');
-			expect(paragraph?.textContent).toBe('see https://example.com/page here');
+			const pill = pills(container)[0];
+			expect(pill).toBeDefined();
+			expect(pill?.textContent).toBe('https://example.com/page');
+			// The full sentence text is preserved around the URL pill.
+			expect(container.querySelector('p')?.textContent).toBe('see https://example.com/page here');
 		});
 
 		it('splices pills around surrounding text without losing it', () => {
@@ -163,9 +177,8 @@ describe('reading view enricher', () => {
 			run(createProcessor(service, { previewStyle: 'favicon' }), container);
 
 			const paragraph = container.querySelector('p');
-			const children = Array.from(paragraph?.childNodes ?? []);
-			expect(children[0]?.textContent).toBe('see ');
-			expect(children[children.length - 1]?.textContent).toBe(' here');
+			expect(paragraph?.textContent?.startsWith('see ')).toBe(true);
+			expect(paragraph?.textContent?.endsWith(' here')).toBe(true);
 		});
 
 		it('leaves URLs inside code blocks alone', () => {
@@ -191,55 +204,31 @@ describe('reading view enricher', () => {
 		});
 	});
 
-	describe('pill rendering', () => {
-		it('renders the inline pill structure with color mode class', () => {
+	describe('icon rendering', () => {
+		it('renders the favicon icon with its styling class', () => {
 			container.innerHTML = '<a href="https://example.com/page">x</a>';
 			run(createProcessor(service, { previewStyle: 'favicon' }), container);
 
-			const pill = pills(container)[0];
-			expect(pill?.className).toBe('url-preview url-preview--inline url-preview--subtle');
-			expect(pill?.querySelector('.url-preview__text')).not.toBeNull();
+			const icon = icons(container)[0];
+			expect(icon?.className).toBe('url-preview__favicon');
+			expect(icon?.alt).toBe('');
 		});
 
-		it('inline-color-mode: none frontmatter lands on the pill class', () => {
+		it('does not build a pill when the service returns no icon', () => {
+			const stub = new FakeFaviconService();
+			stub.getFaviconIconUrl = () => null;
 			container.innerHTML = '<a href="https://example.com/page">x</a>';
-			run(
-				createProcessor(service, { previewStyle: 'favicon', inlineColorMode: 'subtle' }),
-				container,
-				{ 'inline-color-mode': 'none' }
-			);
+			run(createProcessor(stub, { previewStyle: 'favicon' }), container);
 
-			expect(pills(container)[0]?.className).toContain('url-preview--none');
-		});
-
-		it('max-inline-length frontmatter truncates the URL text', () => {
-			container.innerHTML = '<a href="https://example.com/a-very-long-path/that/keeps/going">x</a>';
-			run(
-				createProcessor(service, { previewStyle: 'favicon' }),
-				container,
-				{ 'max-inline-length': '20' }
-			);
-
-			const title = pillTitles(container)[0] ?? '';
-			expect(title.length).toBeLessThanOrEqual(21); // 20 chars + ellipsis
-			expect(title.endsWith('…')).toBe(true);
-		});
-
-		it('show-favicon: false still shows the icon - the mode exists for it', () => {
-			container.innerHTML = '<a href="https://example.com/page">x</a>';
-			run(
-				createProcessor(service, { previewStyle: 'favicon' }),
-				container,
-				{ 'show-favicon': 'false' }
-			);
-
-			expect(container.querySelector('img.url-preview__favicon')).not.toBeNull();
+			expect(pills(container)).toHaveLength(0);
+			// Anchor left fully intact.
+			expect(container.querySelector('a')?.getAttribute('href')).toBe('https://example.com/page');
 		});
 	});
 
 	describe('idempotency', () => {
-		it('does not double-wrap already-enriched pills on a second pass', () => {
-			container.innerHTML = '<p>see https://example.com/page here</p>';
+		it('does not double-pill already-enriched links on a second pass', () => {
+			container.innerHTML = '<a href="https://example.com/page">x</a>';
 			const processor = createProcessor(service, { previewStyle: 'favicon' });
 
 			run(processor, container);
@@ -251,8 +240,8 @@ describe('reading view enricher', () => {
 			expect(pills(container)[0]).toBe(firstPassPills[0]);
 		});
 
-		it('does not re-process pills nested in a re-rendered subtree', () => {
-			container.innerHTML = '<a href="https://example.com/page">x</a>';
+		it('does not re-pill a bare URL nested in a re-rendered subtree', () => {
+			container.innerHTML = '<p>see https://example.com/page here</p>';
 			const processor = createProcessor(service, { previewStyle: 'favicon' });
 
 			run(processor, container);

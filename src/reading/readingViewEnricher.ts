@@ -6,7 +6,7 @@ import type { InlineLinkPreviewSettings } from "../settings";
 import type { LinkPreviewService } from "../services/linkPreviewService";
 import type { LinkMetadata } from "../services/types";
 import { UrlPreviewWidget } from "../decorators/PreviewWidget";
-import { processMetadata, calculateMaxLength } from "../decorators/DecorationBuilder";
+import { calculateMaxLength, processMetadata } from "../decorators/DecorationBuilder";
 import { parsePageConfigFromFrontmatter } from "../decorators/FrontmatterParser";
 import { URL_IN_TEXT_REGEX, isAttachmentUrl, matchesAnyRule } from "../utils/url";
 
@@ -15,7 +15,7 @@ import { URL_IN_TEXT_REGEX, isAttachmentUrl, matchesAnyRule } from "../utils/url
  *
  * Live Preview renders via a CodeMirror ViewPlugin, which never runs in
  * Reading view. This post processor brings the favicon mode there: same pill
- * (favicon icon + inline styling), same URL-as-text rule, same no-fetch
+ * (favicon icon + inline styling + the link's own 文字 label), same no-fetch
  * contract - only the Google favicon service may be contacted.
  *
  * inline/card stay Live-Preview-only: they depend on async metadata fetches,
@@ -25,7 +25,7 @@ import { URL_IN_TEXT_REGEX, isAttachmentUrl, matchesAnyRule } from "../utils/url
 /** Elements whose subtree must never be enriched */
 const SKIP_TAGS = new Set(["CODE", "PRE", "SCRIPT", "STYLE"]);
 
-/** Marker class used to detect already-enriched containers (idempotency) */
+/** Marker class carried by every enriched pill (idempotency) */
 const ENRICHED_MARKER = "url-preview";
 
 function shouldSkip(element: HTMLElement | null): boolean {
@@ -34,8 +34,8 @@ function shouldSkip(element: HTMLElement | null): boolean {
 			return true;
 		}
 
-		// The pill's text is the URL itself - without this check the
-		// processor would wrap already-enriched previews a second time.
+		// The pill's text is the run's own label/URL, so a second pass would
+		// enrich the same URL again without this marker check.
 		if (element.classList.contains(ENRICHED_MARKER)) {
 			return true;
 		}
@@ -45,19 +45,22 @@ function shouldSkip(element: HTMLElement | null): boolean {
 }
 
 /**
- * Build the preview pill for one URL - the Reading view counterpart of the
- * favicon branch in DecorationBuilder's processUrlMatch (same metadata
- * synthesis, same settings flags, same widget, rendered via toDOM()).
+ * Build the favicon pill for one URL - the Reading view counterpart of the
+ * favicon branch in DecorationBuilder.processUrlMatch. The pill shows the
+ * link's own text (`label`, falling back to the URL for bare links) plus the
+ * site icon; the URL remains the click target and the source `[text](url)` is
+ * never modified. No page is fetched, only the Google favicon service.
  */
 function buildPreviewElement(
 	url: string,
+	label: string,
 	service: LinkPreviewService,
 	settings: InlineLinkPreviewSettings,
 	pageConfig: ReturnType<typeof parsePageConfigFromFrontmatter>
 ): HTMLElement | null {
 	// Skip attachment files (URL's last segment looks like a filename) and any
 	// URL matching a user-configured skip rule - they keep Obsidian's native
-	// rendering instead of a preview pill.
+	// rendering, no pill is added.
 	if (isAttachmentUrl(url) || matchesAnyRule(url, settings.attachmentSkipRules)) {
 		return null;
 	}
@@ -71,34 +74,36 @@ function buildPreviewElement(
 	const maxInlineLength = pageConfig.maxInlineLength ?? settings.maxInlineLength;
 	const inlineColorMode = pageConfig.inlineColorMode ?? settings.inlineColorMode;
 	const cardColorMode = pageConfig.cardColorMode ?? settings.cardColorMode;
+	const keepEmoji = settings.keepEmoji;
 
-	// title = URL as written; description dropped; favicon resolved
-	// synchronously from the persistent cache (never fetches the page).
+	const faviconUrl = service.getFaviconIconUrl(url);
+	if (!faviconUrl) {
+		return null;
+	}
+	const limit = calculateMaxLength(previewStyle, maxCardLength, maxInlineLength);
+
 	const metadata: LinkMetadata = {
-		title: url,
+		title: label.trim() ? label : url,
 		description: null,
-		favicon: service.getFaviconIconUrl(url)
+		favicon: faviconUrl
 	};
-
-	const processed = processMetadata(metadata, url, undefined, {
+	const processed = processMetadata(metadata, url, label, {
 		previewStyle,
 		maxCardLength,
 		maxInlineLength,
-		// The mode exists to show the icon - ignore the showFavicon setting,
-		// matching the Live Preview favicon branch.
 		showFavicon: true,
 		includeDescription: false,
-		keepEmoji: settings.keepEmoji
+		keepEmoji
 	});
 
 	const widget = new UrlPreviewWidget(
 		url,
 		processed.title,
-		null,
+		processed.description,
 		processed.faviconUrl,
 		false,
 		"inline",
-		calculateMaxLength(previewStyle, maxCardLength, maxInlineLength),
+		limit,
 		processed.siteName,
 		processed.error,
 		inlineColorMode,
@@ -107,7 +112,7 @@ function buildPreviewElement(
 	return widget.toDOM();
 }
 
-/** Replace an external-link anchor with the preview pill */
+/** Replace an external-link anchor with its favicon pill, keeping the URL live */
 function enrichAnchor(
 	anchor: HTMLAnchorElement,
 	service: LinkPreviewService,
@@ -118,7 +123,10 @@ function enrichAnchor(
 	if (!href || !/^https?:\/\//i.test(href)) {
 		return;
 	}
-	const preview = buildPreviewElement(href, service, settings, pageConfig);
+	// For a markdown link the anchor's own text is the 文字 label; for a bare
+	// auto-linked URL it is the URL itself - either way it is the passed label.
+	const label = anchor.textContent ?? "";
+	const preview = buildPreviewElement(href, label, service, settings, pageConfig);
 	if (!preview) {
 		return;
 	}
@@ -126,8 +134,9 @@ function enrichAnchor(
 }
 
 /**
- * Fallback pass for bare URLs that Obsidian did not auto-link: split the text
- * node around each match and splice in preview pills.
+ * Fallback pass for bare URLs that Obsidian did not auto-link: splice a favicon
+ * pill in place of each URL text, keeping the URL text as the pill's label (the
+ * URL was not a link, so its text is preserved and only the style is added).
  */
 function enrichTextNode(
 	textNode: Text,
@@ -144,7 +153,7 @@ function enrichTextNode(
 	// its lastIndex would leak between calls if used directly.
 	const urlRegex = new RegExp(URL_IN_TEXT_REGEX.source, "gi");
 
-	type Segment = { text: string } | { preview: HTMLElement };
+	type Segment = { text: string } | { pill: HTMLElement };
 	const segments: Segment[] = [];
 	let lastIndex = 0;
 	let found = false;
@@ -153,15 +162,17 @@ function enrichTextNode(
 		const matchIndex = match.index ?? 0;
 		const url = match[0];
 
-		const preview = buildPreviewElement(url, service, settings, pageConfig);
-		if (!preview) {
+		const pill = buildPreviewElement(url, url, service, settings, pageConfig);
+		if (!pill) {
 			continue;
 		}
 
 		if (matchIndex > lastIndex) {
 			segments.push({ text: text.slice(lastIndex, matchIndex) });
 		}
-		segments.push({ preview });
+
+		segments.push({ pill });
+
 		lastIndex = matchIndex + url.length;
 		found = true;
 	}
@@ -182,8 +193,8 @@ function enrichTextNode(
 	// Splice segment-by-segment before the text node, then drop it - no
 	// fragment needed, and every inserted node stays in the parent's document.
 	for (const segment of segments) {
-		if ("preview" in segment) {
-			parent.insertBefore(segment.preview, textNode);
+		if ("pill" in segment) {
+			parent.insertBefore(segment.pill, textNode);
 		} else {
 			parent.insertBefore(textNode.ownerDocument.createTextNode(segment.text), textNode);
 		}

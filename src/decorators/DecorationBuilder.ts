@@ -3,7 +3,6 @@ import type { EditorView } from "@codemirror/view";
 import { syntaxTree } from "@codemirror/language";
 import type { InlineLinkPreviewSettings, PreviewStyle } from "../settings";
 import type { LinkPreviewService } from "../services/linkPreviewService";
-import type { LinkMetadata } from "../services/types";
 import { parsePageConfig, hasFrontmatter } from "./FrontmatterParser";
 import { findWikilinkUrls, findMarkdownLinks, findBareUrls, isInCodeBlock } from "./UrlMatcher";
 import { UrlPreviewWidget, ErrorIndicatorWidget } from "./PreviewWidget";
@@ -297,37 +296,43 @@ export function buildUrlDecorations(
 			return;
 		}
 
-		// Favicon mode: same visual treatment as inline (icon + pill styling),
-		// but the preview text is the URL as written - no metadata fetch, the
-		// page itself is never requested. showFavicon is deliberately ignored:
-		// the mode exists to show the icon.
+		// Favicon mode: render the site icon + the link's own text (its 文字 label)
+		// as a pill. The label and the URL are preserved exactly as written - the
+		// pill's text is the label, the URL stays the click target, and no page is
+		// fetched (only the Google favicon service is contacted for the icon).
+		// showFavicon is deliberately ignored: the mode exists to show the icon.
 		if (previewStyle === "favicon") {
-			const metadata: LinkMetadata = {
-				title: url,
-				description: null,
-				favicon: service.getFaviconIconUrl(url)
-			};
-
-			// Same caret behavior as inline: reveal the raw URL while editing
+			// Mirror the inline-mode caret rule: while the caret sits inside the
+			// link, skip the pill so Obsidian's Live Preview shows the raw
+			// `[text](url)` for editing; the capsule + icon return on blur.
 			if (cursorPos >= start && cursorPos <= end) {
 				return;
 			}
 
-			const processed = processMetadata(metadata, url, linkText, {
-				previewStyle,
-				maxCardLength,
-				maxInlineLength,
-				showFavicon: true,
-				includeDescription: false,
-				keepEmoji
-			});
-
-			// Rendered as a replacement, exactly like inline mode
-			const replacementWidget = Decoration.replace({
+			const faviconUrl = service.getFaviconIconUrl(url);
+			const faviconMetadata: import("../services/types").LinkMetadata = {
+				title: linkText || url,
+				description: null,
+				favicon: faviconUrl
+			};
+			const processed = processMetadata(
+				faviconMetadata,
+				url,
+				linkText,
+				{
+					previewStyle,
+					maxCardLength,
+					maxInlineLength,
+					showFavicon: true,
+					includeDescription: false,
+					keepEmoji
+				}
+			);
+			const pillWidget = Decoration.replace({
 				widget: new UrlPreviewWidget(
 					url,
 					processed.title,
-					null,
+					processed.description,
 					processed.faviconUrl,
 					false,
 					"inline",
@@ -338,7 +343,7 @@ export function buildUrlDecorations(
 					cardColorMode
 				)
 			});
-			decorations.push({ from: start, to: end, decoration: replacementWidget });
+			decorations.push({ from: start, to: end, decoration: pillWidget });
 			return;
 		}
 
