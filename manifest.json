@@ -3,7 +3,8 @@
 	"name": "URL Enricher",
 	"version": "1.4.0",
 	"minAppVersion": "1.13.0",
-	"description": "Non-destructive link preview and enrichment. Automatically displays rich metadata previews for URLs - shows page titles, descriptions, and favicons inline without modifying your markdown source.",
-	"author": "Matt Marotta",
+	"description": "继承自 mattmarotta/obsidian-url-enricher。在笔记中为链接展示标题、描述和 favicon 预览，不修改 markdown 源码。",
+	"author": "姚睿",
+	"authorUrl": "https://github.com/yaorui1996",
 	"isDesktopOnly": false
 }
